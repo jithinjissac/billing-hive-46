@@ -1,10 +1,11 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -12,6 +13,33 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isMobile = useIsMobile();
+  const [iconUrl, setIconUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
+  
+  useEffect(() => {
+    fetchCompanyIcon();
+  }, []);
+  
+  const fetchCompanyIcon = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('icon_url')
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (error) {
+        console.error("Error fetching company icon:", error);
+        return;
+      }
+      
+      if (data && data.icon_url) {
+        setIconUrl(data.icon_url);
+      }
+    } catch (error) {
+      console.error("Error fetching company icon:", error);
+    }
+  };
   
   if (isMobile) {
     return (
@@ -19,7 +47,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
           <div className="flex items-center">
             <img 
-              src="/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png" 
+              src={iconUrl} 
               alt="TechiusPay Logo" 
               className="h-10 w-auto" 
             />

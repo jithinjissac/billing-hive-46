@@ -12,6 +12,7 @@ const defaultCompanySettings = {
   email: "info@techiussolutions.in",
   logo: "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png",
   stamp: "", // Added stamp field
+  icon: "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png", // Added icon field
   slogan: "EXPERIENCE THE DIGITAL INNOVATION" // Added company slogan
 };
 
@@ -77,6 +78,7 @@ export async function getCompanySettingsFromDB() {
       email: data.email,
       logo: data.logo_url,
       stamp: data.stamp_url,
+      icon: data.icon_url,
       slogan: data.slogan
     };
   } catch (error) {

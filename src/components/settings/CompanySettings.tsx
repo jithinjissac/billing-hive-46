@@ -16,10 +16,15 @@ export function CompanySettings() {
   const [website, setWebsite] = useState("www.techiussolutions.in");
   const [email, setEmail] = useState("info@techiussolutions.in");
   const [slogan, setSlogan] = useState("EXPERIENCE THE DIGITAL INNOVATION");
+  
+  // File states
   const [logo, setLogo] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
   const [stamp, setStamp] = useState<File | null>(null);
   const [stampUrl, setStampUrl] = useState<string>("");
+  const [icon, setIcon] = useState<File | null>(null);
+  const [iconUrl, setIconUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load settings on component mount
@@ -48,6 +53,7 @@ export function CompanySettings() {
         setEmail(localSettings.email);
         setLogoUrl(localSettings.logo);
         setStampUrl(localSettings.stamp || "");
+        setIconUrl(localSettings.icon || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
         setSlogan(localSettings.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
         return;
       }
@@ -62,6 +68,7 @@ export function CompanySettings() {
         setEmail(data.email || "");
         setLogoUrl(data.logo_url || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
         setStampUrl(data.stamp_url || "");
+        setIconUrl(data.icon_url || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
         setSlogan(data.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
       }
     } catch (error) {
@@ -70,27 +77,22 @@ export function CompanySettings() {
     }
   };
   
-  const uploadFile = async (file: File, bucket: string, folder: string): Promise<string | null> => {
+  const uploadFile = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${folder}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file);
-        
-      if (uploadError) {
-        console.error("Error uploading file:", uploadError);
-        return null;
-      }
-      
-      const { data } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-        
-      return data.publicUrl;
+      // Convert file to base64
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          resolve(reader.result as string);
+        };
+        reader.onerror = (error) => {
+          console.error("Error reading file:", error);
+          reject(null);
+        };
+      });
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("Error reading file:", error);
       return null;
     }
   };
@@ -100,25 +102,35 @@ export function CompanySettings() {
     setIsSubmitting(true);
     
     try {
-      // Create new logo URL if file was uploaded
+      // Process file uploads
       let newLogoUrl = logoUrl;
+      let newStampUrl = stampUrl;
+      let newIconUrl = iconUrl;
+      
       if (logo) {
-        const uploadedLogoUrl = await uploadFile(logo, 'company-assets', 'logos');
-        if (uploadedLogoUrl) {
-          newLogoUrl = uploadedLogoUrl;
+        const base64Logo = await uploadFile(logo);
+        if (base64Logo) {
+          newLogoUrl = base64Logo;
         } else {
-          toast.error("Failed to upload logo");
+          toast.error("Failed to process logo");
         }
       }
       
-      // Create new stamp URL if file was uploaded
-      let newStampUrl = stampUrl;
       if (stamp) {
-        const uploadedStampUrl = await uploadFile(stamp, 'company-assets', 'stamps');
-        if (uploadedStampUrl) {
-          newStampUrl = uploadedStampUrl;
+        const base64Stamp = await uploadFile(stamp);
+        if (base64Stamp) {
+          newStampUrl = base64Stamp;
         } else {
-          toast.error("Failed to upload stamp");
+          toast.error("Failed to process stamp");
+        }
+      }
+      
+      if (icon) {
+        const base64Icon = await uploadFile(icon);
+        if (base64Icon) {
+          newIconUrl = base64Icon;
+        } else {
+          toast.error("Failed to process icon");
         }
       }
       
@@ -135,6 +147,7 @@ export function CompanySettings() {
           email: email,
           logo_url: newLogoUrl,
           stamp_url: newStampUrl,
+          icon_url: newIconUrl,
           slogan: slogan,
           updated_at: new Date().toISOString()
         })
@@ -157,6 +170,7 @@ export function CompanySettings() {
         email,
         logo: newLogoUrl,
         stamp: newStampUrl,
+        icon: newIconUrl,
         slogan
       });
       
@@ -201,6 +215,39 @@ export function CompanySettings() {
               }}
             />
           </div>
+          <p className="text-sm text-muted-foreground">Recommended size: 300x100px. Used in invoices and documents.</p>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="icon">Company Icon</Label>
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-md border border-input flex items-center justify-center overflow-hidden">
+              {icon ? (
+                <img 
+                  src={URL.createObjectURL(icon)} 
+                  alt="Company Icon" 
+                  className="h-full w-full object-contain" 
+                />
+              ) : (
+                <img 
+                  src={iconUrl} 
+                  alt="Company Icon" 
+                  className="h-full w-full object-contain" 
+                />
+              )}
+            </div>
+            <Input
+              id="icon"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setIcon(e.target.files[0]);
+                }
+              }}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">Square icon used in the sidebar. Recommended size: 64x64px.</p>
         </div>
         
         <div className="space-y-2">
@@ -234,6 +281,7 @@ export function CompanySettings() {
               }}
             />
           </div>
+          <p className="text-sm text-muted-foreground">Used on invoices. Recommended size: 200x200px.</p>
         </div>
         
         <div className="space-y-2">
