@@ -13,6 +13,12 @@ serve(async (req) => {
   }
 
   try {
+    // Get the bucket name from the request
+    const { bucketName } = await req.json();
+    const bucket = bucketName || 'profile-pictures'; // Default to profile-pictures if not specified
+    
+    console.log(`Processing request to create bucket: ${bucket}`);
+    
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     
@@ -34,102 +40,87 @@ serve(async (req) => {
       }
     )
     
-    // Execute SQL with direct bucket creation and open policy application
-    const { error: directSqlError } = await supabaseAdmin.rpc(
-      'execute_sql', 
-      { 
-        sql_query: `
-          -- Make sure profile-pictures bucket exists
-          INSERT INTO storage.buckets (id, name, public, avif_autodetection, file_size_limit, allowed_mime_types)
-          VALUES ('profile-pictures', 'profile-pictures', true, false, 5242880, ARRAY['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
-          ON CONFLICT (id) DO UPDATE SET public = true;
-          
-          -- Remove any existing policies on the profile-pictures bucket
-          DELETE FROM storage.policies 
-          WHERE bucket_id = 'profile-pictures';
-          
-          -- Add completely open policy for all operations
-          INSERT INTO storage.policies (name, bucket_id, operation, definition)
-          VALUES ('allow-all-operations', 'profile-pictures', '*', 'TRUE');
-        `
-      }
-    );
+    // First try listing buckets to check if it already exists
+    const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets()
     
-    if (directSqlError) {
-      console.error("Error executing direct SQL:", directSqlError);
+    if (bucketsError) {
+      console.error("Error listing buckets:", bucketsError);
+      return new Response(
+        JSON.stringify({ error: bucketsError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const bucketExists = buckets?.some(b => b.name === bucket)
+    
+    if (!bucketExists) {
+      console.log(`Creating bucket: ${bucket}`);
+      // Create bucket with public access
+      const { error } = await supabaseAdmin.storage.createBucket(bucket, {
+        public: true,
+        fileSizeLimit: 5242880,
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+      })
       
-      // Fallback approach - try creating the bucket using the API
-      const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets()
-      
-      if (bucketsError) {
-        console.error("Error listing buckets:", bucketsError);
+      if (error) {
+        console.error("Error creating bucket:", error);
         return new Response(
-          JSON.stringify({ error: bucketsError.message }),
+          JSON.stringify({ error: error.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+    } else {
+      console.log(`Bucket ${bucket} already exists, updating policies`);
+    }
+    
+    // Always update policies to ensure they are set correctly
+    try {
+      console.log(`Creating full access policy for ${bucket} bucket`);
       
-      const bucketExists = buckets?.some(bucket => bucket.name === 'profile-pictures')
+      // First get existing policies
+      const { data: policies, error: policiesError } = await supabaseAdmin.storage.from(bucket).getPolicies();
       
-      if (!bucketExists) {
-        console.log("Creating profile-pictures bucket");
-        // Create bucket with public access
-        const { error } = await supabaseAdmin.storage.createBucket('profile-pictures', {
-          public: true,
-          fileSizeLimit: 5242880,
-          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
-        })
-        
-        if (error) {
-          console.error("Error creating bucket:", error);
-          return new Response(
-            JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
+      if (policiesError) {
+        console.error("Error getting policies:", policiesError);
       }
       
-      // Now create the open policy
-      try {
-        console.log("Creating full access policy for profile-pictures bucket");
-        
-        // First delete any existing policies
-        const { data: policies } = await supabaseAdmin.storage.from('profile-pictures').getPolicies();
-        if (policies && policies.length > 0) {
-          for (const policy of policies) {
-            try {
-              await supabaseAdmin.storage.from('profile-pictures').deletePolicy(policy.name);
-            } catch (err) {
-              console.error(`Error deleting policy ${policy.name}:`, err);
-            }
+      if (policies) {
+        // Clear existing policies if any by creating a new policy with the same name
+        for (const policy of policies) {
+          try {
+            console.log(`Removing policy: ${policy.name}`);
+            await supabaseAdmin.storage.from(bucket).deletePolicy(policy.name);
+          } catch (err) {
+            console.error(`Error deleting policy ${policy.name}:`, err);
           }
         }
-        
-        // Create completely open policy
-        const { error: policyError } = await supabaseAdmin
-          .storage
-          .from('profile-pictures')
-          .createPolicy(
-            'allow-all-operations',
-            {
-              name: 'allow-all-operations',
-              definition: "TRUE",
-              allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
-            }
-          );
-        
-        if (policyError) {
-          console.error("Error creating policy:", policyError);
-        }
-      } catch (policyErr) {
-        console.error("Error managing policies:", policyErr);
       }
+      
+      // Create completely open policy
+      const { error: policyError } = await supabaseAdmin
+        .storage
+        .from(bucket)
+        .createPolicy(
+          'allow-public-access',
+          {
+            definition: "TRUE",
+            allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+          }
+        );
+      
+      if (policyError) {
+        console.error("Error creating policy:", policyError);
+        // Continue execution even if policy creation fails
+      }
+    } catch (policyErr) {
+      console.error("Error managing policies:", policyErr);
+      // Continue execution even if policy management fails
     }
     
     return new Response(
       JSON.stringify({ 
-        message: "Profile pictures bucket configured with open access policy",
-        bucket: 'profile-pictures'
+        message: `Bucket ${bucket} configured with open access policy`,
+        bucket: bucket
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

@@ -14,14 +14,19 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Function to create a public bucket via edge function
 export const createPublicBucket = async (bucketName: string) => {
   try {
+    console.log(`Attempting to create public bucket: ${bucketName}`);
+    
     // Call the edge function to create a bucket with public access
-    const { data, error } = await supabase.functions.invoke('create-storage-bucket');
+    const { data, error } = await supabase.functions.invoke('create-storage-bucket', {
+      body: { bucketName }
+    });
     
     if (error) {
       console.error('Error creating public bucket:', error);
       throw error;
     }
     
+    console.log('Bucket created successfully:', data);
     return data;
   } catch (error) {
     console.error('Failed to create public bucket:', error);

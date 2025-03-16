@@ -1,4 +1,3 @@
-
 import { useState, useEffect, ChangeEvent, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -90,23 +89,31 @@ const Profile = () => {
     }
     
     try {
-      // First, ensure the storage bucket is initialized with proper permissions
+      console.log("Initializing storage bucket before upload...");
       await initStorageBucket();
       
-      // Short delay to ensure bucket policies are applied
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log("Waiting for bucket policies to apply...");
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
       console.log("Attempting to upload file:", fileName);
       
-      const { error: uploadError, data } = await supabase.storage
+      const uploadTask = supabase.storage
         .from('profile-pictures')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: true
         });
+      
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
+      
+      const { error: uploadError, data } = await uploadTask;
+      
+      clearInterval(progressInterval);
       
       if (uploadError) {
         console.error("Upload error:", uploadError);
@@ -115,10 +122,13 @@ const Profile = () => {
       }
       
       setUploadProgress(100);
+      console.log("Upload completed successfully:", data);
       
       const { data: { publicUrl } } = supabase.storage
         .from('profile-pictures')
         .getPublicUrl(fileName);
+      
+      console.log("File public URL:", publicUrl);
       
       await updateProfile({
         profile_picture_url: publicUrl
