@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 
 const Profile = () => {
-  const { user, profile, updateProfile, isLoading: authLoading } = useAuth();
+  const { user, profile, updateProfile, isLoading: authLoading, initStorageBucket } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
