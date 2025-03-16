@@ -24,7 +24,7 @@ export function addHeaderSection(
   
   // Add company logo
   try {
-    doc.addImage(companySettings.logo || companySettings.logo_url, 'JPEG', margin, 15, 40, 15);
+    doc.addImage(companySettings.logo || companySettings.logo_url || "/placeholder.svg", 'JPEG', margin, 15, 40, 15);
     doc.setFontSize(10);
     doc.setTextColor(85, 85, 85); // #555
     doc.text(companySettings.slogan, margin, 35);
@@ -37,7 +37,7 @@ export function addHeaderSection(
   doc.setTextColor(0, 0, 0);
   
   // Company information - right aligned
-  const companyInfo = `${companySettings.name}, ${companySettings.address}\nUAM No: ${companySettings.uam_number}\nPhone: ${companySettings.phone}\nWeb: ${companySettings.website}\nE-mail: ${companySettings.email}`;
+  const companyInfo = `${companySettings.name}, ${companySettings.address}\nUAM No: ${companySettings.uam_number || companySettings.uamNumber}\nPhone: ${companySettings.phone}\nWeb: ${companySettings.website}\nE-mail: ${companySettings.email}`;
   
   // Right align the text
   const companyInfoLines = companyInfo.split('\n');
@@ -303,7 +303,7 @@ export function addPaymentSection(
   
   // Signature and stamp column
   doc.setFontSize(10);
-  doc.text("For Techius Solutions,", pageWidth - margin - 50, itemsEndY + 5, { align: 'right' });
+  doc.text(`For ${companySettings.name},`, pageWidth - margin - 50, itemsEndY + 5, { align: 'right' });
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 50, itemsEndY + 15, { align: 'right' });

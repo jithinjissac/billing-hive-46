@@ -10,9 +10,9 @@ const defaultCompanySettings = {
   phone: "+91-9961560545",
   website: "www.techiussolutions.in",
   email: "info@techiussolutions.in",
-  logo: "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png",
-  stamp: "", // Added stamp field
-  slogan: "EXPERIENCE THE DIGITAL INNOVATION" // Added company slogan
+  logo: "",
+  stamp: "",
+  slogan: "EXPERIENCE THE DIGITAL INNOVATION"
 };
 
 // Default invoice settings

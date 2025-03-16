@@ -10,7 +10,7 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { formatCurrency, formatDate } from "@/utils/formatters";
+import { formatCurrency, formatDate, convertNumberToWords } from "@/utils/formatters";
 import { Invoice } from "@/types/invoice";
 import { getCompanySettings, getInvoiceSettings } from "@/services/settingsService";
 import { useEffect, useState } from "react";
@@ -65,6 +65,19 @@ export function InvoiceDetails({
     }
   };
 
+  // Get currency symbol
+  const getCurrencySymbol = (code: string) => {
+    switch (code) {
+      case "USD": return "$";
+      case "GBP": return "£";
+      case "AUD": return "A$";
+      default: return "₹"; // INR default
+    }
+  };
+
+  const currencySymbol = getCurrencySymbol(invoice.currency as string || "INR");
+  const amountInWords = convertNumberToWords(invoice.total, invoice.currency as any || "INR");
+
   return (
     <div className="invoice-container max-w-4xl mx-auto border border-gray-200 rounded-md overflow-hidden">
       {/* Accent bar */}
@@ -74,7 +87,7 @@ export function InvoiceDetails({
       <div className="flex justify-between items-center p-6 border-b border-gray-200">
         <div className="logo-section">
           <img
-            src={companySettings.logo}
+            src={companySettings.logo || "/placeholder.svg"}
             alt="Logo"
             className="h-12 w-auto"
           />
@@ -151,12 +164,7 @@ export function InvoiceDetails({
       {/* Total Section */}
       <div className="flex justify-end p-4 border-t border-b border-gray-200">
         <div className="bg-gray-600 text-white px-3 py-1 mr-3 text-sm min-w-40">
-          Rupees {new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: invoice.currency as string || 'INR',
-            maximumFractionDigits: 0,
-            minimumFractionDigits: 0,
-          }).format(invoice.total).replace(/[^\d]/g, '')} Only
+          {amountInWords}
         </div>
         <div className="bg-[#00b3b3] text-white px-3 py-1 text-sm font-bold text-right w-24">
           {formatCurrency(invoice.total, invoice.currency as any)}
@@ -178,7 +186,7 @@ export function InvoiceDetails({
         
         <div className="text-right">
           <div className="text-sm mb-2">
-            For Techius Solutions,<br />
+            For {companySettings.name},<br />
             <span className="font-bold">RICHU EAPEN GEORGE</span>
           </div>
           {companySettings.stamp && (

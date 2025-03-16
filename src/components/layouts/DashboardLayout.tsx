@@ -13,13 +13,13 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isMobile = useIsMobile();
-  const [iconUrl, setIconUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
+  const [logoUrl, setLogoUrl] = useState<string>("");
   
   useEffect(() => {
-    fetchCompanyIcon();
+    fetchCompanyLogo();
   }, []);
   
-  const fetchCompanyIcon = async () => {
+  const fetchCompanyLogo = async () => {
     try {
       const { data, error } = await supabase
         .from('company_settings')
@@ -29,15 +29,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         .single();
         
       if (error) {
-        console.error("Error fetching company icon:", error);
+        console.error("Error fetching company logo:", error);
         return;
       }
       
       if (data && data.logo_url) {
-        setIconUrl(data.logo_url);
+        setLogoUrl(data.logo_url);
       }
     } catch (error) {
-      console.error("Error fetching company icon:", error);
+      console.error("Error fetching company logo:", error);
     }
   };
   
@@ -47,7 +47,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
           <div className="flex items-center">
             <img 
-              src={iconUrl} 
+              src={logoUrl || "/placeholder.svg"} 
               alt="TechiusPay Logo" 
               className="h-10 w-auto" 
             />

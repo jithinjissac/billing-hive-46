@@ -19,7 +19,7 @@ export function CompanySettings() {
   
   // File states
   const [logo, setLogo] = useState<File | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
+  const [logoUrl, setLogoUrl] = useState<string>("");
   const [stamp, setStamp] = useState<File | null>(null);
   const [stampUrl, setStampUrl] = useState<string>("");
   
@@ -62,7 +62,7 @@ export function CompanySettings() {
         setPhone(data.phone || "");
         setWebsite(data.website || "");
         setEmail(data.email || "");
-        setLogoUrl(data.logo_url || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
+        setLogoUrl(data.logo_url || "");
         setStampUrl(data.stamp_url || "");
         setSlogan(data.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
       }
