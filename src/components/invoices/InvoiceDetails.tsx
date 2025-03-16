@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -95,16 +96,24 @@ export function InvoiceDetails({
       
       <div className="flex justify-between items-center p-6 border-b border-gray-200">
         <div className="logo-section">
-          <img
-            src={companySettings.logo || "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png"}
-            alt="Company Logo"
-            className="h-20 w-auto object-contain"
-            onError={(e) => {
-              console.error("Logo load error:", e);
-              const target = e.target as HTMLImageElement;
-              target.src = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
-            }}
-          />
+          {companySettings.logo ? (
+            <img
+              src={companySettings.logo}
+              alt="Company Logo"
+              className="h-20 w-auto object-contain"
+              onError={(e) => {
+                console.error("Logo load error:", e);
+                const target = e.target as HTMLImageElement;
+                target.src = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+              }}
+            />
+          ) : (
+            <img
+              src="/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png"
+              alt="Default Company Logo"
+              className="h-20 w-auto object-contain"
+            />
+          )}
           <div className="text-xs text-gray-500 mt-1">{companySettings.slogan}</div>
         </div>
         
@@ -220,16 +229,24 @@ export function InvoiceDetails({
             For {companySettings.name},<br />
             <span className="font-bold">RICHU EAPEN GEORGE</span>
           </div>
-          <img 
-            src={companySettings.stamp || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"}
-            alt="Company Stamp"
-            className="w-24 h-auto inline-block object-contain"
-            onError={(e) => {
-              console.error("Stamp load error:", e);
-              const target = e.target as HTMLImageElement;
-              target.src = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
-            }}
-          />
+          {companySettings.stamp ? (
+            <img 
+              src={companySettings.stamp}
+              alt="Company Stamp"
+              className="w-24 h-auto inline-block object-contain"
+              onError={(e) => {
+                console.error("Stamp load error:", e);
+                const target = e.target as HTMLImageElement;
+                target.src = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+              }}
+            />
+          ) : (
+            <img 
+              src="/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"
+              alt="Default Company Stamp"
+              className="w-24 h-auto inline-block object-contain"
+            />
+          )}
         </div>
       </div>
       

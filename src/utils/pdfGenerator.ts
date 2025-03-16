@@ -52,14 +52,29 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.setDrawColor(221, 221, 221); // #ddd
     doc.setLineWidth(0.5);
     
-    // Add company logo
-    try {
-      doc.addImage(companySettings.logo, 'JPEG', margin, 15, 40, 15);
-      doc.setFontSize(10);
-      doc.setTextColor(85, 85, 85); // #555
-      doc.text(companySettings.slogan, margin, 35);
-    } catch (error) {
-      console.error("Could not add logo image:", error);
+    // Add company logo if available
+    if (companySettings.logo) {
+      try {
+        doc.addImage(companySettings.logo, 'JPEG', margin, 15, 40, 15);
+        doc.setFontSize(10);
+        doc.setTextColor(85, 85, 85); // #555
+        doc.text(companySettings.slogan, margin, 35);
+      } catch (error) {
+        console.error("Could not add logo image:", error);
+        try {
+          // Fallback to default logo only if there's an error
+          doc.addImage("/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png", 'JPEG', margin, 15, 40, 15);
+        } catch (innerError) {
+          console.error("Could not add fallback logo:", innerError);
+        }
+      }
+    } else {
+      try {
+        // If no logo is set, use default
+        doc.addImage("/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png", 'JPEG', margin, 15, 40, 15);
+      } catch (error) {
+        console.error("Could not add default logo:", error);
+      }
     }
     
     // Add company details on the right
@@ -274,6 +289,19 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
         doc.addImage(companySettings.stamp, 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
       } catch (error) {
         console.error("Could not add stamp image:", error);
+        try {
+          // Only use default stamp if there's an error loading custom stamp
+          doc.addImage("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png", 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
+        } catch (innerError) {
+          console.error("Could not add fallback stamp:", innerError);
+        }
+      }
+    } else {
+      try {
+        // If no stamp is set, use default
+        doc.addImage("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png", 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
+      } catch (error) {
+        console.error("Could not add default stamp:", error);
       }
     }
     
