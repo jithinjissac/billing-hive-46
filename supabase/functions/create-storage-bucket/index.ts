@@ -62,59 +62,25 @@ serve(async (req) => {
         )
       }
       
-      // Create proper RLS policies for the bucket
+      // Create very permissive RLS policies for the bucket
       try {
-        console.log("Setting up RLS policies for profile-pictures bucket");
+        console.log("Setting up permissive RLS policies for profile-pictures bucket");
         
-        // Allow authenticated users to upload their own files
-        const { error: uploadPolicyError } = await supabaseAdmin
+        // Create a simple policy that allows all operations for authenticated users
+        const { error: allOperationsPolicyError } = await supabaseAdmin
           .storage
           .from('profile-pictures')
           .createPolicy(
-            'allow-uploads',
+            'allow-all-operations',
             {
-              name: 'allow-uploads',
-              definition: "auth.uid() = uuid_generate_v4()::text OR TRUE",
-              allowedOperations: ['INSERT']
+              name: 'allow-all-operations',
+              definition: "TRUE", // Allow everything regardless of user
+              allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
             }
           );
         
-        if (uploadPolicyError) {
-          console.error("Error creating upload policy:", uploadPolicyError);
-        }
-        
-        // Allow public access to read profile pictures
-        const { error: readPolicyError } = await supabaseAdmin
-          .storage
-          .from('profile-pictures')
-          .createPolicy(
-            'allow-public-read',
-            {
-              name: 'allow-public-read',
-              definition: "TRUE",
-              allowedOperations: ['SELECT']
-            }
-          );
-        
-        if (readPolicyError) {
-          console.error("Error creating read policy:", readPolicyError);
-        }
-        
-        // Allow users to update/delete their own uploads
-        const { error: modifyPolicyError } = await supabaseAdmin
-          .storage
-          .from('profile-pictures')
-          .createPolicy(
-            'allow-owner-modifications',
-            {
-              name: 'allow-owner-modifications',
-              definition: "auth.uid() = owner OR TRUE",
-              allowedOperations: ['UPDATE', 'DELETE']
-            }
-          );
-        
-        if (modifyPolicyError) {
-          console.error("Error creating modify policy:", modifyPolicyError);
+        if (allOperationsPolicyError) {
+          console.error("Error creating all operations policy:", allOperationsPolicyError);
         }
         
       } catch (policyErr) {
@@ -124,7 +90,7 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({ 
-          message: "Profile pictures bucket created successfully with proper RLS policies",
+          message: "Profile pictures bucket created successfully with permissive RLS policies",
           bucket: 'profile-pictures'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
