@@ -14,6 +14,7 @@ import { formatCurrency, formatDate, convertNumberToWords } from "@/utils/format
 import { Invoice } from "@/types/invoice";
 import { getCompanySettings, getInvoiceSettings } from "@/services/settingsService";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
@@ -28,16 +29,37 @@ interface InvoiceDetailsProps {
     stamp: string;
     slogan: string;
   };
+  creatorName?: string;
 }
 
 export function InvoiceDetails({ 
   invoice,
-  companySettings: initialCompanySettings
+  companySettings: initialCompanySettings,
+  creatorName
 }: InvoiceDetailsProps) {
   const [companySettings, setCompanySettings] = useState(
     initialCompanySettings || getCompanySettings()
   );
   const [invoiceSettings, setInvoiceSettings] = useState(getInvoiceSettings());
+  const [companyData, setCompanyData] = useState<any>(null);
+  
+  useEffect(() => {
+    // Fetch company settings from database
+    const fetchCompanySettings = async () => {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('*')
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (!error && data) {
+        setCompanyData(data);
+      }
+    };
+    
+    fetchCompanySettings();
+  }, []);
   
   useEffect(() => {
     const handleSettingsUpdate = () => {
@@ -85,6 +107,10 @@ export function InvoiceDetails({
 
   // Calculate discount amount
   const discountAmount = invoice.discount > 0 ? (invoice.subtotal * (invoice.discount / 100)) : 0;
+  
+  // Get logo and stamp URLs from database if available
+  const logoUrl = companyData?.logo_url || companySettings.logo || "";
+  const stampUrl = companyData?.stamp_url || companySettings.stamp || "";
 
   return (
     <div className="invoice-container max-w-4xl mx-auto border border-gray-200 rounded-md overflow-hidden">
@@ -92,23 +118,21 @@ export function InvoiceDetails({
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6 border-b border-gray-200 gap-4">
         <div className="logo-section">
-          {companySettings.logo ? (
+          {logoUrl ? (
             <img
-              src={companySettings.logo}
+              src={logoUrl}
               alt="Company Logo"
               className="h-16 sm:h-20 w-auto object-contain"
               onError={(e) => {
                 console.error("Logo load error:", e);
                 const target = e.target as HTMLImageElement;
-                target.src = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+                target.style.display = 'none';
               }}
             />
           ) : (
-            <img
-              src="/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png"
-              alt="Default Company Logo"
-              className="h-16 sm:h-20 w-auto object-contain"
-            />
+            <div className="h-16 sm:h-20 flex items-center text-gray-400 italic">
+              No logo available
+            </div>
           )}
           <div className="text-xs text-gray-500 mt-1">{companySettings.slogan}</div>
         </div>
@@ -190,7 +214,7 @@ export function InvoiceDetails({
                 <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(invoice.tax, invoice.currency as any)}</TableCell>
               </TableRow>
             )}
-            {invoice.discount && invoice.discount > 0 && (
+            {invoice.discount > 0 && (
               <TableRow>
                 <TableCell className="text-xs sm:text-sm">DISCOUNT</TableCell>
                 <TableCell></TableCell>
@@ -225,25 +249,23 @@ export function InvoiceDetails({
         <div className="text-right">
           <div className="text-xs sm:text-sm mb-2">
             For {companySettings.name},<br />
-            <span className="font-bold">RICHU EAPEN GEORGE</span>
+            <span className="font-bold">{creatorName || "RICHU EAPEN GEORGE"}</span>
           </div>
-          {companySettings.stamp ? (
+          {stampUrl ? (
             <img 
-              src={companySettings.stamp}
+              src={stampUrl}
               alt="Company Stamp"
               className="w-20 sm:w-24 h-auto inline-block object-contain"
               onError={(e) => {
                 console.error("Stamp load error:", e);
                 const target = e.target as HTMLImageElement;
-                target.src = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+                target.style.display = 'none';
               }}
             />
           ) : (
-            <img 
-              src="/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"
-              alt="Default Company Stamp"
-              className="w-20 sm:w-24 h-auto inline-block object-contain"
-            />
+            <div className="w-20 sm:w-24 h-20 sm:h-24 inline-block border border-dashed border-gray-300 flex items-center justify-center text-gray-400 italic text-xs">
+              No stamp available
+            </div>
           )}
         </div>
       </div>

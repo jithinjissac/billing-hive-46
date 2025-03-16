@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Printer, Download, ArrowLeft, Edit, Eye } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoiceDetails } from "@/components/invoices/InvoiceDetails";
-import { generatePDF } from "@/utils/pdf";
+import { generatePDF } from "@/utils/pdfGenerator";
 import { Invoice } from "@/types/invoice";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +29,42 @@ const InvoiceView = () => {
   const [companySettings, setCompanySettings] = useState(getCompanySettings());
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [creatorName, setCreatorName] = useState("");
+  const [user, setUser] = useState<any>(null);
+  
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        setUser(data.user);
+        if (data.user.user_metadata?.name) {
+          setCreatorName(data.user.user_metadata.name);
+        } else if (data.user.email) {
+          setCreatorName(data.user.email);
+        }
+      }
+    };
+    
+    fetchUser();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        if (session.user.user_metadata?.name) {
+          setCreatorName(session.user.user_metadata.name);
+        } else if (session.user.email) {
+          setCreatorName(session.user.email);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setCreatorName("");
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
   
   useEffect(() => {
     const handleSettingsUpdate = () => {
@@ -49,7 +84,7 @@ const InvoiceView = () => {
   const generatePdfPreview = async (invoiceData: Invoice) => {
     try {
       setIsPdfLoading(true);
-      const preview = await generatePDF(invoiceData, false);
+      const preview = await generatePDF(invoiceData, false, creatorName || undefined);
       setPdfPreview(preview);
     } catch (error) {
       console.error("Error generating PDF preview:", error);
@@ -179,13 +214,13 @@ const InvoiceView = () => {
     };
     
     fetchInvoice();
-  }, [id, navigate]);
+  }, [id, navigate, creatorName]);
   
   const handleDownloadPDF = async () => {
     if (!invoice) return;
     
     try {
-      await generatePDF(invoice, true);
+      await generatePDF(invoice, true, creatorName || undefined);
       toast.success("Invoice downloaded successfully");
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -374,6 +409,7 @@ const InvoiceView = () => {
                 <InvoiceDetails 
                   invoice={invoice} 
                   companySettings={companySettings}
+                  creatorName={creatorName}
                 />
               </div>
             </CardContent>

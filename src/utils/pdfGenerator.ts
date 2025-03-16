@@ -5,6 +5,7 @@ import { addWrappedText } from "./pdfHelpers";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { getCompanySettings, getInvoiceSettings } from "@/services/settingsService";
+import { supabase } from "@/integrations/supabase/client";
 
 // Extend the jsPDF type to include autoTable
 declare module "jspdf" {
@@ -16,8 +17,16 @@ declare module "jspdf" {
 /**
  * Generate and download a PDF for the given invoice
  */
-export async function generatePDF(invoice: Invoice, autoDownload: boolean = false): Promise<string | undefined> {
+export async function generatePDF(invoice: Invoice, autoDownload: boolean = false, creatorName?: string): Promise<string | undefined> {
   try {
+    // Fetch company settings from database first
+    const { data: companyData, error } = await supabase
+      .from('company_settings')
+      .select('*')
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+      
     // Create a new PDF document
     const doc = new jsPDF({
       orientation: "portrait",
@@ -33,6 +42,12 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     // Get company settings and invoice settings
     const companySettings = getCompanySettings();
     const invoiceSettings = getInvoiceSettings();
+    
+    // Merge database settings with local settings
+    const mergedCompanySettings = {
+      ...companySettings,
+      ...(companyData || {})
+    };
     
     // Get currency code
     const currencyCode = invoice.currency as CurrencyCode || "INR" as CurrencyCode;
@@ -52,28 +67,19 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.setDrawColor(221, 221, 221); // #ddd
     doc.setLineWidth(0.5);
     
+    // Get logo and stamp URLs from database if available
+    const logoUrl = mergedCompanySettings.logo_url || mergedCompanySettings.logo || "";
+    const stampUrl = mergedCompanySettings.stamp_url || mergedCompanySettings.stamp || "";
+    
     // Add company logo if available
-    if (companySettings.logo) {
+    if (logoUrl) {
       try {
-        doc.addImage(companySettings.logo, 'JPEG', margin, 15, 40, 15);
+        doc.addImage(logoUrl, 'JPEG', margin, 15, 40, 15);
         doc.setFontSize(10);
         doc.setTextColor(85, 85, 85); // #555
-        doc.text(companySettings.slogan, margin, 35);
+        doc.text(mergedCompanySettings.slogan, margin, 35);
       } catch (error) {
         console.error("Could not add logo image:", error);
-        try {
-          // Fallback to default logo only if there's an error
-          doc.addImage("/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png", 'JPEG', margin, 15, 40, 15);
-        } catch (innerError) {
-          console.error("Could not add fallback logo:", innerError);
-        }
-      }
-    } else {
-      try {
-        // If no logo is set, use default
-        doc.addImage("/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png", 'JPEG', margin, 15, 40, 15);
-      } catch (error) {
-        console.error("Could not add default logo:", error);
       }
     }
     
@@ -82,7 +88,7 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.setTextColor(0, 0, 0);
     
     // Company information - right aligned
-    const companyInfo = `${companySettings.name}, ${companySettings.address}\nUAM No: ${companySettings.uamNumber}\nPhone : ${companySettings.phone}\nWeb : ${companySettings.website}\nE-mail : ${companySettings.email}`;
+    const companyInfo = `${mergedCompanySettings.name}, ${mergedCompanySettings.address}\nUAM No: ${mergedCompanySettings.uam_number}\nPhone : ${mergedCompanySettings.phone}\nWeb : ${mergedCompanySettings.website}\nE-mail : ${mergedCompanySettings.email}`;
     
     // Right align the text
     const companyInfoLines = companyInfo.split('\n');
@@ -99,7 +105,7 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.rect(margin, 45, contentWidth, 20, 'F');
     
     // Add Invoice title
-    doc.setFontSize(28);
+    doc.setFontSize(24);
     doc.setTextColor(102, 102, 102); // #666
     doc.text("INVOICE", margin + 5, 60);
     
@@ -211,13 +217,31 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     
     // Add the subtotal row
     doc.setFontSize(11);
-    doc.setFontSize(11);
     doc.text("SUB TOTAL", margin + 5, itemsEndY);
     const subtotalAmount = `${currencySymbol} ${invoice.subtotal.toLocaleString('en-IN')}/-`;
     const subtotalWidth = doc.getTextWidth(subtotalAmount);
     doc.text(subtotalAmount, pageWidth - margin - subtotalWidth, itemsEndY);
     
-    // Add border line after subtotal
+    // Add Tax row if applicable
+    if (invoice.tax > 0) {
+      itemsEndY += 10;
+      doc.text("TAX", margin + 5, itemsEndY);
+      const taxAmount = `${currencySymbol} ${invoice.tax.toLocaleString('en-IN')}/-`;
+      const taxWidth = doc.getTextWidth(taxAmount);
+      doc.text(taxAmount, pageWidth - margin - taxWidth, itemsEndY);
+    }
+    
+    // Add Discount row if applicable
+    if (invoice.discount > 0) {
+      itemsEndY += 10;
+      const discountAmount = invoice.subtotal * (invoice.discount / 100);
+      doc.text("DISCOUNT", margin + 5, itemsEndY);
+      const discountText = `-${currencySymbol} ${discountAmount.toLocaleString('en-IN')}/-`;
+      const discountWidth = doc.getTextWidth(discountText);
+      doc.text(discountText, pageWidth - margin - discountWidth, itemsEndY);
+    }
+    
+    // Add border line after subtotal/tax/discount
     doc.line(margin, itemsEndY + 5, pageWidth - margin, itemsEndY + 5);
     
     // Total section with amount in words and digits
@@ -231,7 +255,7 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.rect(pageWidth - margin - 210, itemsEndY - 7, 150, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
-    doc.text(`Rupees ${amountInWords}`, pageWidth - margin - 210 + 5, itemsEndY - 2);
+    doc.text(amountInWords, pageWidth - margin - 210 + 5, itemsEndY - 2);
     
     // Add the amount with teal background
     doc.setFillColor(0, 179, 179); // #00b3b3
@@ -277,31 +301,18 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     
     // Signature and stamp column
     doc.setFontSize(10);
-    doc.text("For Techius Solutions,", pageWidth - margin - 50, itemsEndY + 5, { align: 'right' });
+    doc.text(`For ${mergedCompanySettings.name},`, pageWidth - margin - 50, itemsEndY + 5, { align: 'right' });
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 50, itemsEndY + 15, { align: 'right' });
+    doc.text(creatorName || "RICHU EAPEN GEORGE", pageWidth - margin - 50, itemsEndY + 15, { align: 'right' });
     doc.setFont("helvetica", "normal");
     
     // Add stamp if available
-    if (companySettings.stamp) {
+    if (stampUrl) {
       try {
-        doc.addImage(companySettings.stamp, 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
+        doc.addImage(stampUrl, 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
       } catch (error) {
         console.error("Could not add stamp image:", error);
-        try {
-          // Only use default stamp if there's an error loading custom stamp
-          doc.addImage("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png", 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
-        } catch (innerError) {
-          console.error("Could not add fallback stamp:", innerError);
-        }
-      }
-    } else {
-      try {
-        // If no stamp is set, use default
-        doc.addImage("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png", 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
-      } catch (error) {
-        console.error("Could not add default stamp:", error);
       }
     }
     
@@ -341,17 +352,24 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.setFontSize(11);
     doc.text("Note:", margin + 5, paymentEndY + 50);
     
-    // Add notes from settings
+    // Add notes from invoice
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const notes = invoiceSettings.notes || [
-      "Upgrading the current cloud hosting service plans are extra payable as per the client requirements.",
-      "Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters."
-    ];
     
-    notes.forEach((note, i) => {
-      doc.text(`• ${note}`, margin + 15, paymentEndY + 50 + ((i + 1) * 6));
-    });
+    // Parse notes
+    const notes = Array.isArray(invoice.notes) 
+      ? invoice.notes 
+      : (typeof invoice.notes === 'string' 
+          ? invoice.notes.split('\n').filter(note => note.trim() !== '') 
+          : []);
+    
+    if (notes.length > 0) {
+      notes.forEach((note, i) => {
+        doc.text(`• ${note}`, margin + 15, paymentEndY + 50 + ((i + 1) * 6));
+      });
+    } else {
+      doc.text("• No additional notes for this invoice.", margin + 15, paymentEndY + 56);
+    }
     
     // Save the PDF for download if requested
     if (autoDownload) {

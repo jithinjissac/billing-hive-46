@@ -1,10 +1,12 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,6 +15,15 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isMobile = useIsMobile();
   const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  // Redirect if user is not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/auth/login');
+    }
+  }, [user, isLoading, navigate]);
   
   if (isMobile) {
     return (
