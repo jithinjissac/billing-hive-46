@@ -1,5 +1,4 @@
-
-import { Invoice } from "@/types/invoice";
+import { Invoice, CurrencyCode } from "@/types/invoice";
 import { formatCurrency, formatDate, convertNumberToWords } from "./formatters";
 import { addWrappedText, createTableRow } from "./pdfHelpers";
 import jsPDF from "jspdf";
@@ -140,7 +139,7 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.setFont("helvetica", "normal");
     doc.text(invoice.invoiceNumber, pageWidth - margin - 30, invoiceTitleY + 12);
     
-    // Currency info if available
+    // Currency info if available - Here's the first fix: Cast currency as CurrencyCode
     if (invoice.currency) {
       doc.setFont("helvetica", "bold");
       doc.text("Currency :", pageWidth - margin - 60, invoiceTitleY + 19);
@@ -176,11 +175,12 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
       doc.setFont("helvetica", "normal");
       
       invoice.items.forEach(item => {
-        // Create a properly formatted table row with wrapped text
+        // Second fix: Cast currency as CurrencyCode
+        const currencyCode = invoice.currency as CurrencyCode || "INR" as CurrencyCode;
         y = createTableRow(
           doc,
           item.description,
-          formatCurrency(item.price * item.quantity, invoice.currency),
+          formatCurrency(item.price * item.quantity, currencyCode),
           y,
           margin,
           pageWidth,
@@ -195,10 +195,12 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.line(margin, y, pageWidth - margin, y);
     y += 10;
     
-    // Totals section
+    // Third fix: Cast currency as CurrencyCode
+    const currencyCode = invoice.currency as CurrencyCode || "INR" as CurrencyCode;
+    
     doc.setFont("helvetica", "bold");
     doc.text("TOTAL", margin, y);
-    doc.text(formatCurrency(invoice.subtotal, invoice.currency), pageWidth - margin, y, { align: "right" });
+    doc.text(formatCurrency(invoice.subtotal, currencyCode), pageWidth - margin, y, { align: "right" });
     
     // Draw line
     y += 5;
@@ -208,7 +210,7 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     // Discount (using tax field from the invoice as discount)
     doc.text("DISCOUNT", margin, y);
     doc.setFont("helvetica", "normal");
-    doc.text(formatCurrency(invoice.tax, invoice.currency), pageWidth - margin, y, { align: "right" });
+    doc.text(formatCurrency(invoice.tax, currencyCode), pageWidth - margin, y, { align: "right" });
     
     // Draw line
     y += 5;
@@ -220,8 +222,8 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.setFont("helvetica", "bold");
     doc.text("FINAL TO BE PAID", margin, y);
     
-    // Amount in words with proper wrapping
-    const amountInWords = convertNumberToWords(invoice.total, invoice.currency as any);
+    // Fourth fix: Cast currency as CurrencyCode for amount in words
+    const amountInWords = convertNumberToWords(invoice.total, currencyCode);
     
     // Create properly sized and positioned boxes for the amounts
     doc.setFillColor(102, 102, 102); // #666
@@ -234,7 +236,7 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.text(`Rupees ${amountInWords}`, pageWidth - margin - wordsWidth/2 - 35, y, { align: "center" });
     
     // Amount box
-    const amountText = formatCurrency(invoice.total, invoice.currency);
+    const amountText = formatCurrency(invoice.total, currencyCode);
     const amountWidth = doc.getTextWidth(amountText) + 10;
     doc.setFillColor(0, 179, 179); // #00b3b3
     doc.roundedRect(pageWidth - margin - amountWidth, y - 5, amountWidth, 8, 1, 1, 'F');
