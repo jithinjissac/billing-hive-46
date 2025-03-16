@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +38,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
   
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState(invoice?.invoiceNumber || generateInvoiceNumber());
-  const [customerId, setCustomerId] = useState(invoice?.customer.id || "");
+  const [customerId, setCustomerId] = useState(invoice?.customer?.id || "");
   const [date, setDate] = useState(invoice?.date || new Date().toISOString().substring(0, 10));
   const [dueDate, setDueDate] = useState(invoice?.dueDate || getDefaultDueDate());
   const [status, setStatus] = useState<"draft" | "pending" | "paid" | "overdue">(invoice?.status || "pending");
@@ -75,6 +74,8 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
   const fetchCustomers = async () => {
     try {
       setIsLoadingCustomers(true);
+      console.log("Fetching customers...");
+      
       const { data, error } = await supabase
         .from('customers')
         .select('*')
@@ -86,7 +87,9 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
         return;
       }
       
-      if (data) {
+      console.log("Customers data:", data);
+      
+      if (data && data.length > 0) {
         const formattedCustomers = data.map(c => ({
           id: c.id,
           name: c.name,
@@ -95,12 +98,15 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
           address: c.address || '',
         }));
         
+        console.log("Formatted customers:", formattedCustomers);
         setCustomers(formattedCustomers);
         
         // If we have customers and no customerId is selected, select the first one
         if (formattedCustomers.length > 0 && !customerId) {
           setCustomerId(formattedCustomers[0].id);
         }
+      } else {
+        console.log("No customers found or empty data array");
       }
     } catch (error) {
       console.error("Error fetching customers:", error);
