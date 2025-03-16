@@ -123,6 +123,8 @@ const InvoiceView = () => {
           };
         });
         
+        let status = invoiceData.status as "draft" | "pending" | "paid" | "overdue" | "cancelled";
+        
         const fullInvoice: Invoice = {
           id: invoiceData.id,
           invoiceNumber: invoiceData.invoice_number,
@@ -135,7 +137,7 @@ const InvoiceView = () => {
           },
           date: invoiceData.date,
           dueDate: invoiceData.due_date,
-          status: invoiceData.status,
+          status: status,
           items: items,
           subtotal: Number(invoiceData.subtotal),
           tax: Number(invoiceData.tax),
