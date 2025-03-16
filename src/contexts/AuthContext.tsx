@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
@@ -45,10 +45,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchProfile = async (userId: string) => {
+  
+  // Memoize the fetchProfile function to prevent unnecessary re-renders
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
-      console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -60,21 +60,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
-      console.log("Profile fetched successfully:", data);
       setProfile(data);
     } catch (error) {
       console.error("Error in fetchProfile:", error);
     }
-  };
+  }, []);
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     try {
-      console.log("Refreshing session...");
       setIsLoading(true);
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       
       if (currentSession) {
-        console.log("Session refreshed successfully");
         setSession(currentSession);
         setUser(currentSession.user);
 
@@ -82,7 +79,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           await fetchProfile(currentSession.user.id);
         }
       } else {
-        console.log("No active session found");
         setSession(null);
         setUser(null);
         setProfile(null);
@@ -92,16 +88,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchProfile]);
 
-  const updateProfile = async (profileData: Partial<Profile>) => {
+  const updateProfile = useCallback(async (profileData: Partial<Profile>) => {
     if (!user) {
       toast.error("You must be logged in to update your profile");
       return;
     }
 
     try {
-      console.log("Updating profile with data:", profileData);
       const { error } = await supabase
         .from('profiles')
         .update(profileData)
@@ -120,25 +115,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error("Error in updateProfile:", error);
       toast.error("An unexpected error occurred");
     }
-  };
+  }, [user, fetchProfile]);
 
   useEffect(() => {
     // Get initial session
     const initializeAuth = async () => {
       try {
-        console.log("Initializing authentication...");
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (initialSession) {
-          console.log("Initial session found");
           setSession(initialSession);
           setUser(initialSession.user);
 
           if (initialSession.user) {
             await fetchProfile(initialSession.user.id);
           }
-        } else {
-          console.log("No initial session found");
         }
       } catch (error) {
         console.error("Error getting session:", error);
@@ -152,10 +143,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log("Auth state changed:", event);
-        
         if (newSession) {
-          console.log("New session established");
           setSession(newSession);
           setUser(newSession.user);
           
@@ -163,7 +151,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             await fetchProfile(newSession.user.id);
           }
         } else {
-          console.log("Session ended");
           setSession(null);
           setUser(null);
           setProfile(null);
@@ -187,21 +174,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
-      console.log("Signing out...");
       setIsLoading(true);
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
-      throw error;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const value = {
     session,

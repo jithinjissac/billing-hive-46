@@ -20,14 +20,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     
     if (!supabaseServiceKey) {
-      console.error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable")
       return new Response(
         JSON.stringify({ error: 'Service role key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
-    console.log("Creating Supabase admin client")
     const supabaseAdmin = createClient(
       supabaseUrl,
       supabaseServiceKey,
@@ -41,7 +39,6 @@ serve(async (req) => {
 
     // Get the enabled flag from the request body
     const { enabled } = await req.json()
-    console.log(`Toggling email confirmation to: ${enabled ? "enabled" : "disabled"}`)
     
     // Toggle email confirmation (autoconfirm is the opposite of requiring confirmation)
     const { error } = await supabaseAdmin.auth.admin.updateConfig({
@@ -49,20 +46,17 @@ serve(async (req) => {
     })
 
     if (error) {
-      console.error("Error updating email confirmation:", error)
       return new Response(
         JSON.stringify({ error: error.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`Email confirmation successfully ${enabled ? "enabled" : "disabled"}`)
     return new Response(
       JSON.stringify({ success: true, message: `Email confirmation ${enabled ? "enabled" : "disabled"} successfully` }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error("Unexpected error in toggle-email-confirmation:", error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

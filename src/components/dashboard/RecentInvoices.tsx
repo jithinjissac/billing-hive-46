@@ -11,36 +11,46 @@ export function RecentInvoices() {
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
+    let isMounted = true;
+    
+    const fetchRecentInvoices = async () => {
+      try {
+        if (!isMounted) return;
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('invoices')
+          .select(`
+            id,
+            invoice_number,
+            date,
+            status,
+            total,
+            currency,
+            customers:customer_id (name)
+          `)
+          .order('date', { ascending: false })
+          .limit(5);
+        
+        if (error) throw error;
+        
+        if (isMounted) {
+          setRecentInvoices(data || []);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching recent invoices:", error);
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    
     fetchRecentInvoices();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, []);
-  
-  const fetchRecentInvoices = async () => {
-    try {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase
-        .from('invoices')
-        .select(`
-          id,
-          invoice_number,
-          date,
-          status,
-          total,
-          currency,
-          customers:customer_id (name)
-        `)
-        .order('date', { ascending: false })
-        .limit(5);
-      
-      if (error) throw error;
-      
-      setRecentInvoices(data || []);
-    } catch (error) {
-      console.error("Error fetching recent invoices:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
   if (isLoading) {
     return (

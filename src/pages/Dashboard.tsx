@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -21,38 +21,75 @@ const Dashboard = () => {
   });
   
   useEffect(() => {
+    let isMounted = true;
+    
+    const fetchDashboardData = async () => {
+      try {
+        if (!isMounted) return;
+        setIsLoading(true);
+        
+        // Fetch all invoices with a more efficient query
+        const { data: invoices, error } = await supabase
+          .from('invoices')
+          .select('status')
+          .limit(1000);
+        
+        if (error) throw error;
+        
+        if (isMounted) {
+          // Calculate dashboard metrics
+          const totalCount = invoices?.length || 0;
+          const paidCount = invoices?.filter(inv => inv.status === 'paid').length || 0;
+          const pendingCount = invoices?.filter(inv => inv.status === 'pending').length || 0;
+          const overdueCount = invoices?.filter(inv => inv.status === 'overdue').length || 0;
+          
+          setDashboardData({
+            totalInvoices: totalCount,
+            paidInvoices: paidCount,
+            pendingInvoices: pendingCount,
+            overdueInvoices: overdueCount
+          });
+          
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    
     fetchDashboardData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
   
-  const fetchDashboardData = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Fetch all invoices
-      const { data: invoices, error } = await supabase
-        .from('invoices')
-        .select('id, status');
-      
-      if (error) throw error;
-      
-      // Calculate dashboard metrics
-      const totalCount = invoices?.length || 0;
-      const paidCount = invoices?.filter(inv => inv.status === 'paid').length || 0;
-      const pendingCount = invoices?.filter(inv => inv.status === 'pending').length || 0;
-      const overdueCount = invoices?.filter(inv => inv.status === 'overdue').length || 0;
-      
-      setDashboardData({
-        totalInvoices: totalCount,
-        paidInvoices: paidCount,
-        pendingInvoices: pendingCount,
-        overdueInvoices: overdueCount
-      });
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Memoize the card grid to prevent unnecessary re-renders
+  const totalsGrid = useMemo(() => (
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <TotalsWidget 
+        title="Total Invoices" 
+        value={dashboardData.totalInvoices} 
+        isLoading={isLoading}
+      />
+      <TotalsWidget 
+        title="Paid Invoices" 
+        value={dashboardData.paidInvoices}
+        isLoading={isLoading}
+      />
+      <TotalsWidget 
+        title="Pending Invoices" 
+        value={dashboardData.pendingInvoices}
+        isLoading={isLoading}
+      />
+      <TotalsWidget 
+        title="Overdue Invoices" 
+        value={dashboardData.overdueInvoices}
+        isLoading={isLoading}
+      />
+    </div>
+  ), [dashboardData, isLoading]);
   
   return (
     <DashboardLayout>
@@ -67,28 +104,7 @@ const Dashboard = () => {
         </Button>
       </div>
       
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <TotalsWidget 
-          title="Total Invoices" 
-          value={dashboardData.totalInvoices} 
-          isLoading={isLoading}
-        />
-        <TotalsWidget 
-          title="Paid Invoices" 
-          value={dashboardData.paidInvoices}
-          isLoading={isLoading}
-        />
-        <TotalsWidget 
-          title="Pending Invoices" 
-          value={dashboardData.pendingInvoices}
-          isLoading={isLoading}
-        />
-        <TotalsWidget 
-          title="Overdue Invoices" 
-          value={dashboardData.overdueInvoices}
-          isLoading={isLoading}
-        />
-      </div>
+      {totalsGrid}
       
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-7 mb-6">
         <Card className="lg:col-span-4">
