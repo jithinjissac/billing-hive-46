@@ -58,11 +58,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const response = await createPublicBucket('profile-pictures');
       console.log("Storage bucket response:", response);
       
+      if (response.partial) {
+        console.warn("Storage bucket partially configured:", response.message);
+        toast.warning("Storage access partially configured. Please try again if you encounter upload issues.");
+      }
+      
       setBucketInitialized(true);
       return response;
     } catch (error) {
       console.error("Error initializing storage bucket:", error);
-      throw error;
+      toast.error("Failed to configure storage access. Profile picture uploads may not work.");
+      setBucketInitialized(true);
+      return { error: true, message: "Failed to initialize bucket" };
     }
   }, []);
   
@@ -201,25 +208,44 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
       
-      const { error: storageError } = await supabase
-        .storage
-        .from('profile-pictures')
-        .remove([profilePicturePath]);
+      if (!bucketInitialized) {
+        await initStorageBucket();
+      }
       
-      if (storageError) {
-        console.error("Error removing profile picture from storage:", storageError);
-        toast.error("Failed to remove profile picture from storage");
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_picture_url: null })
+        .eq('id', user.id);
+      
+      if (updateError) {
+        console.error("Error updating profile:", updateError);
+        toast.error("Failed to update profile");
         return;
       }
       
-      await updateProfile({ profile_picture_url: null });
+      try {
+        const { error: storageError } = await supabase
+          .storage
+          .from('profile-pictures')
+          .remove([profilePicturePath]);
+        
+        if (storageError) {
+          console.error("Error removing profile picture from storage:", storageError);
+          // Don't show error to user since profile was already updated
+        }
+      } catch (storageError) {
+        console.error("Exception removing profile picture from storage:", storageError);
+        // Don't show error to user since profile was already updated
+      }
+      
+      setProfile(prev => prev ? {...prev, profile_picture_url: null} : null);
       
       toast.success("Profile picture removed successfully");
     } catch (error) {
       console.error("Error in removeProfilePicture:", error);
       toast.error("An error occurred while removing profile picture");
     }
-  }, [user, profile, updateProfile]);
+  }, [user, profile, bucketInitialized, initStorageBucket]);
 
   useEffect(() => {
     const initializeAuth = async () => {

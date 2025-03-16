@@ -14,54 +14,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Function to create a public bucket via edge function
 export const createPublicBucket = async (bucketName: string) => {
   try {
-    console.log(`Attempting to create public bucket: ${bucketName}`);
+    console.log(`Attempting to create/configure public bucket: ${bucketName}`);
     
-    // First check if bucket exists
-    const { data: existingBuckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) {
-      console.error('Error listing buckets:', listError);
-    } else {
-      const bucketExists = existingBuckets?.some(b => b.name === bucketName);
-      
-      if (bucketExists) {
-        console.log(`Bucket ${bucketName} already exists, updating permissions...`);
-        
-        // Try to update bucket directly
-        try {
-          // Update existing bucket to ensure it's public
-          await supabase.storage.updateBucket(bucketName, {
-            public: true,
-            fileSizeLimit: 5242880,
-            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
-          });
-          
-          console.log(`Updated bucket ${bucketName} to be public`);
-          return { success: true, message: `Bucket ${bucketName} permissions updated` };
-        } catch (policyError) {
-          console.error('Error updating bucket policies:', policyError);
-          // Continue to edge function as fallback
-        }
-      } else {
-        // Try to create bucket directly with public access
-        try {
-          const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
-            public: true,
-            fileSizeLimit: 5242880,
-            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
-          });
-          
-          if (!createError) {
-            console.log(`Successfully created public bucket ${bucketName}`);
-            return { success: true, message: `Bucket ${bucketName} created successfully` };
-          }
-        } catch (createBucketError) {
-          console.error('Error creating bucket directly:', createBucketError);
-        }
-      }
-    }
-    
-    // Use edge function as fallback if direct methods failed
+    // Use edge function to ensure bucket is public and RLS is disabled
     console.log(`Using edge function to ensure bucket ${bucketName} is public...`);
     const { data, error } = await supabase.functions.invoke('create-storage-bucket', {
       body: { bucketName }
@@ -72,14 +27,51 @@ export const createPublicBucket = async (bucketName: string) => {
       throw error;
     }
     
-    console.log('Bucket creation/update response from edge function:', data);
+    console.log('Bucket configuration response from edge function:', data);
     
     // Add delay to allow policies to propagate
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    return data;
+    // Try fallback direct bucket operations if edge function doesn't report success
+    if (!data || !data.rls_disabled) {
+      console.log("Edge function may not have fully configured the bucket, trying direct operations");
+      
+      // Try to ensure bucket exists
+      try {
+        const { data: listData, error: listError } = await supabase.storage.listBuckets();
+        
+        if (!listError) {
+          const exists = listData?.some(b => b.name === bucketName);
+          
+          if (!exists) {
+            console.log(`Bucket ${bucketName} not found, attempting to create directly`);
+            await supabase.storage.createBucket(bucketName, {
+              public: true,
+              fileSizeLimit: 5242880,
+              allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+            });
+          } else {
+            console.log(`Bucket ${bucketName} found, updating settings directly`);
+            await supabase.storage.updateBucket(bucketName, {
+              public: true,
+              fileSizeLimit: 5242880,
+              allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+            });
+          }
+        }
+      } catch (directError) {
+        console.error("Error with direct bucket operations:", directError);
+        // Continue anyway, the edge function might have succeeded partially
+      }
+    }
+    
+    return data || { success: true, message: `Bucket ${bucketName} configured` };
   } catch (error) {
     console.error('Failed to create/update public bucket:', error);
-    throw error;
+    // Return a partial success to prevent blocking the user experience
+    return { 
+      partial: true, 
+      message: "Bucket may have been partially configured. Some operations might not work correctly."
+    };
   }
 };

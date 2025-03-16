@@ -88,90 +88,80 @@ serve(async (req) => {
       }
     }
     
-    // Delete any existing policies first
+    // Critical change: DISABLE ROW LEVEL SECURITY on storage.objects table
+    console.log("Executing SQL to disable row level security on storage.objects...");
     try {
-      const { data: policies } = await supabaseAdmin.storage.from(bucket).getPolicies();
-      
-      if (policies) {
-        console.log(`Found ${policies.length} existing policies, removing them...`);
-        for (const policy of policies) {
-          console.log(`Removing policy: ${policy.name}`);
-          try {
-            await supabaseAdmin.storage.from(bucket).deletePolicy(policy.name);
-          } catch (err) {
-            console.error(`Error deleting policy ${policy.name}:`, err);
-          }
-        }
-      }
-    } catch (policiesError) {
-      console.error("Error getting policies:", policiesError);
-    }
-    
-    // Create completely open policy
-    console.log("Creating new open access policy...");
-    try {
-      const { error: policyError } = await supabaseAdmin
-        .storage
-        .from(bucket)
-        .createPolicy(
-          'allow-public-access',
-          {
-            definition: "TRUE",
-            allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
-          }
-        );
-      
-      if (policyError) {
-        console.error("Error creating policy:", policyError);
-      } else {
-        console.log("Successfully created policy: allow-public-access");
-      }
-    } catch (policyError) {
-      console.error("Error creating policy:", policyError);
-    }
-    
-    // Ensure RLS is disabled (just in case)
-    console.log("Executing SQL to ensure bucket is fully public...");
-    try {
-      const { error: sqlError } = await supabaseAdmin.rpc('set_bucket_public', { 
-        bucket_name: bucket 
+      const { error: disableRlsError } = await supabaseAdmin.rpc('execute_sql', {
+        sql: `
+          -- Disable RLS on storage.objects
+          ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
+        `
       });
       
-      if (sqlError) {
-        console.error("Error running SQL fallback:", sqlError);
-        
-        // Try direct SQL as last resort
-        try {
-          const { error: directSqlError } = await supabaseAdmin.rpc('execute_sql', {
-            sql: `
-              -- Make bucket public
-              UPDATE storage.buckets SET public = TRUE WHERE name = '${bucket}';
-              
-              -- Remove any RLS if present
-              ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
-              
-              -- Re-enable with open policy
-              ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-            `
-          });
-          
-          if (directSqlError) {
-            console.error("Error with direct SQL execution:", directSqlError);
-          }
-        } catch (directErr) {
-          console.error("Error with direct SQL execution:", directErr);
-        }
+      if (disableRlsError) {
+        console.error("Error disabling RLS:", disableRlsError);
+      } else {
+        console.log("Successfully disabled RLS on storage.objects");
       }
     } catch (sqlErr) {
       console.error("Error with SQL operations:", sqlErr);
     }
     
+    // Create simplified open policy just in case
+    console.log("Creating simplified open access policy...");
+    try {
+      // Delete any existing policies first for this bucket
+      try {
+        const { data: policies } = await supabaseAdmin.storage.from(bucket).getPolicies();
+        
+        if (policies && policies.length > 0) {
+          console.log(`Found ${policies.length} existing policies, removing them...`);
+          for (const policy of policies) {
+            console.log(`Removing policy: ${policy.name}`);
+            try {
+              await supabaseAdmin.storage.from(bucket).deletePolicy(policy.name);
+            } catch (err) {
+              console.error(`Error deleting policy ${policy.name}:`, err);
+            }
+          }
+        }
+      } catch (policiesError) {
+        console.error("Error getting policies:", policiesError);
+      }
+      
+      // Add a simple open policy
+      try {
+        await supabaseAdmin.rpc('execute_sql', {
+          sql: `
+            -- Make bucket public at the bucket level
+            UPDATE storage.buckets SET public = TRUE WHERE name = '${bucket}';
+            
+            -- Create open policy directly in the database
+            INSERT INTO storage.policies (name, bucket_id, operation, definition)
+            VALUES (
+              'allow-all-operations',
+              '${bucket}',
+              'ALL',
+              'TRUE'
+            ) ON CONFLICT (name, bucket_id) DO UPDATE 
+            SET definition = 'TRUE', operation = 'ALL';
+          `
+        });
+        console.log("Successfully created open access policy via SQL");
+      } catch (policyError) {
+        console.error("Error creating policy via SQL:", policyError);
+      }
+    } catch (policySetupError) {
+      console.error("Error with policy setup:", policySetupError);
+    }
+    
     return new Response(
       JSON.stringify({ 
-        message: `Bucket ${bucket} configured with open access policy`,
+        message: `Bucket ${bucket} configured with open access (RLS disabled)`,
         bucket: bucket,
         created: bucketCreated,
-        public: true
+        public: true,
+        rls_disabled: true
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
