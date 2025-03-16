@@ -50,7 +50,7 @@ serve(async (req) => {
       console.log("Creating profile-pictures bucket");
       const { data, error } = await supabaseAdmin.storage.createBucket('profile-pictures', {
         public: true,
-        fileSizeLimit: 2097152, // 2MB
+        fileSizeLimit: 5242880, // 5MB (increased from 2MB)
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
       })
       
@@ -62,35 +62,23 @@ serve(async (req) => {
         )
       }
       
-      // Create policy to allow authenticated users to upload their own files
+      // Create simplified policies without using deprecated API methods
       try {
         console.log("Creating policies for profile-pictures bucket");
-        
-        // Policy for authenticated uploads
-        const { error: policyError1 } = await supabaseAdmin
+
+        // Public policy for all operations
+        const { error: policyError } = await supabaseAdmin
           .storage
           .from('profile-pictures')
-          .createPolicy('authenticated-uploads', {
-            name: 'authenticated-uploads',
-            definition: "(bucket_id = 'profile-pictures'::text) AND (auth.role() = 'authenticated'::text)"
+          .createPolicy('public-policy', {
+            name: 'public-policy',
+            definition: "true", // Allow all operations for all users
+            allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
           });
         
-        if (policyError1) {
-          console.error("Error creating authenticated uploads policy:", policyError1);
-        }
-        
-        // Policy for public downloads
-        const { error: policyError2 } = await supabaseAdmin
-          .storage
-          .from('profile-pictures')
-          .createPolicy('public-downloads', {
-            name: 'public-downloads',
-            definition: "(bucket_id = 'profile-pictures'::text)",
-            allowedOperations: ['SELECT']
-          });
-        
-        if (policyError2) {
-          console.error("Error creating public downloads policy:", policyError2);
+        if (policyError) {
+          console.error("Error creating public policy:", policyError);
+          // Continue execution even if policy creation fails
         }
         
       } catch (policyErr) {

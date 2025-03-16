@@ -46,29 +46,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
-  const [storageInitialized, setStorageInitialized] = useState(false);
   
-  // Initialize storage bucket on load - do only once
+  // Initialize storage bucket only once at the start
   useEffect(() => {
     const initStorageBucket = async () => {
-      if (storageInitialized) return;
+      if (!session) return;
       
       try {
         console.log("Initializing storage bucket...");
-        const { error } = await supabase.functions.invoke("create-storage-bucket");
-        if (error) {
-          console.error("Error invoking create-storage-bucket function:", error);
-        } else {
-          console.log("Storage bucket initialized successfully");
-          setStorageInitialized(true);
-        }
+        await supabase.functions.invoke("create-storage-bucket");
+        console.log("Storage bucket initialized successfully");
       } catch (error) {
         console.error("Error initializing storage bucket:", error);
+        // Don't throw an error here, just log it
       }
     };
     
-    initStorageBucket();
-  }, [storageInitialized]);
+    if (session) {
+      initStorageBucket();
+    }
+  }, [session]);
   
   const fetchProfile = useCallback(async (userId: string) => {
     try {

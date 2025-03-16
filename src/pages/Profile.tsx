@@ -12,11 +12,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Upload, Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
 const Profile = () => {
   const { user, profile, updateProfile, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     first_name: "",
@@ -71,49 +74,46 @@ const Profile = () => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     
+    // Reset states
+    setUploadingImage(true);
+    setUploadProgress(0);
+    setUploadError(null);
+    
     // Check if the file is an image
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file");
+      setUploadingImage(false);
       return;
     }
     
-    // Check if the file size is less than 2MB
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image size should be less than 2MB");
+    // Check if the file size is less than 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      setUploadingImage(false);
       return;
     }
-    
-    setUploadingImage(true);
     
     try {
       // Generate a unique file name
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
-      // Ensure profile-pictures bucket exists by calling the edge function
-      try {
-        const { error: bucketError } = await supabase.functions.invoke("create-storage-bucket");
-        if (bucketError) {
-          console.error("Error creating bucket via edge function:", bucketError);
-          throw bucketError;
-        }
-      } catch (error) {
-        console.error("Error creating bucket via edge function:", error);
-        toast.error("Error preparing for upload");
-        setUploadingImage(false);
-        return;
-      }
-      
-      // Upload the file
+      // Upload the file directly without calling the edge function
+      // The bucket should already exist and have the right permissions
       const { error: uploadError, data } = await supabase.storage
         .from('profile-pictures')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: true
+          upsert: true,
+          onUploadProgress: (progress) => {
+            const percent = Math.round((progress.loaded / progress.total) * 100);
+            setUploadProgress(percent);
+          }
         });
       
       if (uploadError) {
         console.error("Upload error:", uploadError);
+        setUploadError(uploadError.message);
         throw uploadError;
       }
       
@@ -128,9 +128,9 @@ const Profile = () => {
       });
       
       toast.success("Profile picture updated successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading profile picture:", error);
-      toast.error("Failed to upload profile picture");
+      toast.error(`Failed to upload profile picture: ${error.message || "Unknown error"}`);
     } finally {
       setUploadingImage(false);
     }
@@ -139,7 +139,7 @@ const Profile = () => {
   // Create initials for avatar fallback
   const initials = useMemo(() => {
     if (formData.first_name && formData.last_name) {
-      return `${formData.first_name[0]}${formData.last_name[0]}`;
+      return `${formData.first_name[0]}${formData.last_name[0]}`.toUpperCase();
     }
     return user?.email?.[0].toUpperCase() || "?";
   }, [formData.first_name, formData.last_name, user]);
@@ -217,7 +217,10 @@ const Profile = () => {
                 </AvatarFallback>
               </Avatar>
               
-              <label htmlFor="profile-picture-upload" className="absolute -bottom-2 -right-2 rounded-full p-2 bg-primary text-white cursor-pointer">
+              <label 
+                htmlFor="profile-picture-upload" 
+                className={`absolute -bottom-2 -right-2 rounded-full p-2 ${uploadingImage ? 'bg-muted' : 'bg-primary'} text-white cursor-pointer`}
+              >
                 {uploadingImage ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -233,6 +236,22 @@ const Profile = () => {
                 disabled={uploadingImage}
               />
             </div>
+            
+            {uploadingImage && (
+              <div className="w-full mb-4">
+                <Progress value={uploadProgress} className="h-2 mb-1" />
+                <p className="text-xs text-center text-muted-foreground">
+                  Uploading: {uploadProgress}%
+                </p>
+              </div>
+            )}
+            
+            {uploadError && (
+              <div className="mb-4 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded text-sm text-destructive flex items-start">
+                <Info className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            )}
             
             <div className="text-center">
               <h3 className="text-lg font-medium">
