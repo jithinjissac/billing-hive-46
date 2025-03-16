@@ -13,8 +13,15 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface MonthlyData {
+  month: string;
+  paid: number;
+  pending: number;
+  overdue: number;
+}
+
 export function InvoiceStats() {
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<MonthlyData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
@@ -32,7 +39,7 @@ export function InvoiceStats() {
       if (error) throw error;
       
       // Process the data to group by month
-      const monthlyData: { [key: string]: { paid: number; pending: number; overdue: number } } = {};
+      const monthlyData: { [key: string]: MonthlyData } = {};
       
       // Get current year
       const currentYear = new Date().getFullYear();
