@@ -42,28 +42,33 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     
     // Create positions object for section generators
     const positions: SectionPositions = {
-      currentY: 0,
+      currentY: margin,
       pageWidth,
       margin,
       contentWidth
     };
     
     // Generate each section of the PDF
-    addHeaderSection(doc, companySettings, pageWidth, margin);
+    addHeaderSection(doc, companySettings, positions);
+    positions.currentY += 45; // Update position after header
+
     addInvoiceTitleSection(doc, invoice, positions);
+    positions.currentY += 25; // Update position after invoice title
+
     addClientSection(doc, invoice, positions);
+    positions.currentY += 35; // Update position after client info
     
-    // Generate items table and get ending Y position
-    const itemsEndY = addInvoiceTable(doc, invoice, currencySymbol, positions);
+    // Generate items table
+    positions.currentY = addInvoiceTable(doc, invoice, currencySymbol, positions);
     
-    // Generate total section and get ending Y position
-    const totalEndY = addTotalSection(doc, invoice, currencySymbol, currencyCode, itemsEndY, positions);
+    // Generate total section
+    positions.currentY = addTotalSection(doc, invoice, currencySymbol, currencyCode, positions);
     
-    // Generate payment section and get ending Y position
-    const paymentEndY = addPaymentSection(doc, invoice, companySettings, totalEndY, positions);
+    // Generate payment section
+    positions.currentY = addPaymentSection(doc, invoice, companySettings, positions);
     
     // Generate footer section
-    addFooterSection(doc, invoiceSettings, paymentEndY, positions);
+    addFooterSection(doc, invoiceSettings, positions);
     
     // Save the PDF for download if requested
     if (autoDownload) {

@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -25,8 +24,8 @@ interface InvoiceDetailsProps {
     website: string;
     email: string;
     logo: string;
-    slogan: string;
     stamp: string;
+    slogan: string;
   };
 }
 
@@ -39,7 +38,6 @@ export function InvoiceDetails({
   );
   const [invoiceSettings, setInvoiceSettings] = useState(getInvoiceSettings());
   
-  // Listen for settings changes
   useEffect(() => {
     const handleSettingsUpdate = () => {
       setCompanySettings(getCompanySettings());
@@ -65,7 +63,6 @@ export function InvoiceDetails({
     }
   };
 
-  // Get currency symbol
   const getCurrencySymbol = (code: string) => {
     switch (code) {
       case "USD": return "$";
@@ -78,25 +75,22 @@ export function InvoiceDetails({
   const currencySymbol = getCurrencySymbol(invoice.currency as string || "INR");
   const amountInWords = convertNumberToWords(invoice.total, invoice.currency as any || "INR");
 
-  // Default logo and stamp if not provided
   const logoUrl = companySettings.logo || "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
   const stampUrl = companySettings.stamp || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
 
   return (
     <div className="invoice-container max-w-4xl mx-auto border border-gray-200 rounded-md overflow-hidden">
-      {/* Accent bar */}
       <div className="h-2 bg-[#00b3b3]"></div>
       
-      {/* Header */}
       <div className="flex justify-between items-center p-6 border-b border-gray-200">
         <div className="logo-section">
           <img
             src={logoUrl}
-            alt="Logo"
+            alt="Company Logo"
             className="h-20 w-auto object-contain"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = "/placeholder.svg";
+              target.src = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
             }}
           />
           <div className="text-xs text-gray-500 mt-1">{companySettings.slogan}</div>
@@ -113,7 +107,6 @@ export function InvoiceDetails({
         </div>
       </div>
       
-      {/* Invoice Title Section */}
       <div className="flex justify-between p-6 bg-gray-50 border-b border-gray-200">
         <h1 className="text-2xl text-gray-600 font-normal">INVOICE</h1>
         <div className="text-right text-sm">
@@ -125,7 +118,6 @@ export function InvoiceDetails({
         </div>
       </div>
       
-      {/* Client Details */}
       <div className="p-6 border-b border-gray-200">
         <div className="inline-block px-4 py-1 mb-2 bg-[#00b3b3] text-white text-sm">BILL TO</div>
         <p className="text-sm">
@@ -134,7 +126,6 @@ export function InvoiceDetails({
         </p>
       </div>
       
-      {/* Invoice Items */}
       <Table>
         <TableHeader className="bg-gray-50">
           <TableRow>
@@ -169,7 +160,6 @@ export function InvoiceDetails({
         </TableBody>
       </Table>
       
-      {/* Total Section */}
       <div className="flex justify-end p-4 border-t border-b border-gray-200">
         <div className="bg-gray-600 text-white px-3 py-1 mr-3 text-sm min-w-40">
           {amountInWords}
@@ -179,7 +169,6 @@ export function InvoiceDetails({
         </div>
       </div>
       
-      {/* Payment and Signature Section */}
       <div className="flex justify-between p-6 border-b border-gray-200">
         <div className="payment-details text-sm">
           <h3 className="underline font-bold mb-2">Payment Account Details</h3>
@@ -203,23 +192,20 @@ export function InvoiceDetails({
             className="w-24 h-auto inline-block object-contain"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = "/placeholder.svg";
+              target.src = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
             }}
           />
         </div>
       </div>
       
-      {/* Thank You */}
       <div className="py-4 text-center border-b border-gray-200 text-base">
         {invoiceSettings.defaultNotes}
       </div>
       
-      {/* Quote */}
       <div className="bg-gray-600 text-white p-4 text-center text-sm italic">
         {invoiceSettings.footerText}
       </div>
       
-      {/* Notes Section */}
       <div className="bg-[#00b3b3] text-white p-4">
         <h3 className="text-base font-bold mb-2">Note:</h3>
         <ul className="list-disc pl-5 text-sm space-y-1">
