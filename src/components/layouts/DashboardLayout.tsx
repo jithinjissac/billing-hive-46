@@ -20,10 +20,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="flex items-center">
             <img 
               src="/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png" 
-              alt="Company Logo" 
+              alt="TechiusPay Logo" 
               className="h-10 w-auto" 
             />
-            <span className="ml-2 font-bold text-xl">Billing Hive</span>
+            <span className="ml-2 font-bold text-xl">TechiusPay</span>
           </div>
           <Sheet>
             <SheetTrigger asChild>
@@ -46,7 +46,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <main className="flex-1 p-8 ml-64">
+      <main className="flex-1 p-6">
         {children}
       </main>
     </div>

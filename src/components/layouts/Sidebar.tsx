@@ -24,35 +24,31 @@ export function Sidebar({ children }: SidebarProps) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const [companyLogo, setCompanyLogo] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
-  const [companyName, setCompanyName] = useState<string>("TechiusPay");
+  const [logoUrl, setLogoUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
   
   useEffect(() => {
-    fetchCompanySettings();
+    fetchCompanyLogo();
   }, []);
   
-  const fetchCompanySettings = async () => {
+  const fetchCompanyLogo = async () => {
     try {
       const { data, error } = await supabase
         .from('company_settings')
-        .select('name, logo_url')
+        .select('logo_url')
         .order('id', { ascending: false })
         .limit(1)
         .single();
         
       if (error) {
-        console.error("Error fetching company settings:", error);
+        console.error("Error fetching company logo:", error);
         return;
       }
       
-      if (data) {
-        setCompanyName(data.name);
-        if (data.logo_url) {
-          setCompanyLogo(data.logo_url);
-        }
+      if (data && data.logo_url) {
+        setLogoUrl(data.logo_url);
       }
     } catch (error) {
-      console.error("Error fetching company settings:", error);
+      console.error("Error fetching company logo:", error);
     }
   };
 
@@ -66,11 +62,11 @@ export function Sidebar({ children }: SidebarProps) {
         <div className="flex items-center justify-between h-16 px-4 border-b bg-white">
           <Link to="/" className="flex items-center gap-2">
             <img 
-              src={companyLogo}
-              alt={companyName}
+              src={logoUrl}
+              alt="TechiusPay"
               className="h-8 w-auto"
             />
-            <span className="font-semibold text-lg">{companyName}</span>
+            <span className="font-semibold text-lg">TechiusPay</span>
           </Link>
           <Button
             variant="ghost"
@@ -84,23 +80,23 @@ export function Sidebar({ children }: SidebarProps) {
       )}
       <div
         className={`${
-          !isMobile ? "w-60 border-r" : "fixed inset-0 z-50 bg-white/80 backdrop-blur-sm"
+          !isMobile ? "w-64 border-r" : "fixed inset-0 z-50 bg-white/80 backdrop-blur-sm"
         } ${isMobile && !isOpen && "hidden"}`}
       >
         <div
           className={`${
-            !isMobile ? "w-60" : "w-3/4 h-full bg-white border-r"
+            !isMobile ? "w-64" : "w-3/4 h-full bg-white border-r"
           } flex flex-col`}
         >
           {isMobile && (
             <div className="flex items-center justify-between h-16 px-4 border-b">
               <Link to="/" className="flex items-center gap-2">
                 <img 
-                  src={companyLogo}
-                  alt={companyName}
+                  src={logoUrl}
+                  alt="TechiusPay"
                   className="h-8 w-auto"
                 />
-                <span className="font-semibold text-lg">{companyName}</span>
+                <span className="font-semibold text-lg">TechiusPay</span>
               </Link>
               <Button
                 variant="ghost"
@@ -117,11 +113,11 @@ export function Sidebar({ children }: SidebarProps) {
               <div className="flex items-center gap-2 px-2 py-4">
                 <Link to="/" className="flex items-center gap-2">
                   <img 
-                    src={companyLogo}
-                    alt={companyName}
+                    src={logoUrl}
+                    alt="TechiusPay"
                     className="h-8 w-auto"
                   />
-                  <span className="font-semibold text-lg">{companyName}</span>
+                  <span className="font-semibold text-lg">TechiusPay</span>
                 </Link>
               </div>
             )}
