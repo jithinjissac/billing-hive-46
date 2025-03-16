@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -19,7 +20,7 @@ interface AuthContextType {
   profile: Profile | null;
   signOut: () => Promise<void>;
   isLoading: boolean;
-  refreshSession: () => Promise<Session | null>;  // Updated return type
+  refreshSession: () => Promise<Session | null>;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
 }
 
@@ -29,7 +30,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   signOut: async () => {},
   isLoading: true,
-  refreshSession: async () => null,  // Updated default value
+  refreshSession: async () => null,
   updateProfile: async () => {},
 });
 
@@ -72,12 +73,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (fetchError) {
         console.error("Error fetching profile:", fetchError);
         toast.error("Failed to fetch profile");
-        return;
+        return null;
       }
 
       if (existingProfile) {
         console.log("Profile data fetched:", existingProfile);
         setProfile(existingProfile);
+        return existingProfile;
       } else {
         // If profile doesn't exist, create it
         const { data: newProfile, error: insertError } = await supabase
@@ -89,14 +91,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (insertError) {
           console.error("Error creating profile:", insertError);
           toast.error("Failed to create profile");
+          return null;
         } else if (newProfile) {
           console.log("New profile created:", newProfile);
           setProfile(newProfile);
+          return newProfile;
         }
       }
+      
+      return null;
     } catch (error) {
       console.error("Error in fetchProfile:", error);
       toast.error("An error occurred while fetching profile");
+      return null;
     }
   }, []);
 
@@ -131,22 +138,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       console.log("Updating profile with data:", profileData);
       
+      // Make sure we have the user ID in the profile data
+      const dataToUpdate = {
+        ...profileData,
+        id: user.id,
+        updated_at: new Date().toISOString()
+      };
+      
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          ...profileData,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(dataToUpdate);
 
       if (error) {
         console.error("Error updating profile:", error);
-        toast.error("Failed to update profile");
+        toast.error("Failed to update profile: " + error.message);
         return;
       }
 
-      await fetchProfile(user.id);
-      toast.success("Profile updated successfully");
+      // Fetch the updated profile to ensure we have the latest data
+      const updatedProfile = await fetchProfile(user.id);
+      
+      if (updatedProfile) {
+        toast.success("Profile updated successfully");
+      }
     } catch (error) {
       console.error("Error in updateProfile:", error);
       toast.error("An error occurred while updating profile");
