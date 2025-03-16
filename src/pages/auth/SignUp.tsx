@@ -79,6 +79,8 @@ const SignUp = () => {
             last_name: lastName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'id'
           });
           
         if (profileError) {

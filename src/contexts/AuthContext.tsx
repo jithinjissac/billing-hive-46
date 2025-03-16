@@ -110,7 +110,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setProfile(existingProfile);
         return existingProfile;
       } else {
-        console.log("Creating new profile for user:", userId);
+        console.log("No profile found, creating new profile for user:", userId);
         
         // Get user metadata to populate profile
         const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -121,17 +121,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (!userError && userData?.user?.user_metadata) {
           firstName = userData.user.user_metadata.first_name || null;
           lastName = userData.user.user_metadata.last_name || null;
+          console.log("Using metadata for profile creation:", firstName, lastName);
         }
         
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert([{ 
+          .upsert({ 
             id: userId,
             first_name: firstName,
             last_name: lastName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          }])
+          }, {
+            onConflict: 'id'
+          })
           .select()
           .single();
 
