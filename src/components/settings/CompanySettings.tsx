@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getCompanySettings, updateCompanySettings } from "@/services/settingsService";
-import { supabase } from "@/integrations/supabase/client";
 
 export function CompanySettings() {
   const [companyName, setCompanyName] = useState("Techius Solutions");
@@ -24,76 +23,17 @@ export function CompanySettings() {
 
   // Load settings on component mount
   useEffect(() => {
-    loadSettings();
+    const settings = getCompanySettings();
+    setCompanyName(settings.name);
+    setAddress(settings.address);
+    setUamNumber(settings.uamNumber);
+    setPhone(settings.phone);
+    setWebsite(settings.website);
+    setEmail(settings.email);
+    setLogoUrl(settings.logo);
+    setStampUrl(settings.stamp || "");
+    setSlogan(settings.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
   }, []);
-  
-  const loadSettings = async () => {
-    try {
-      // Check if we have data in Supabase
-      const { data, error } = await supabase
-        .from('company_settings')
-        .select('*')
-        .order('id', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (error) {
-        console.error("Error loading company settings from Supabase:", error);
-        const localSettings = getCompanySettings();
-        setCompanyName(localSettings.name);
-        setAddress(localSettings.address);
-        setUamNumber(localSettings.uamNumber);
-        setPhone(localSettings.phone);
-        setWebsite(localSettings.website);
-        setEmail(localSettings.email);
-        setLogoUrl(localSettings.logo);
-        setStampUrl(localSettings.stamp || "");
-        setSlogan(localSettings.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
-        return;
-      }
-      
-      // If we have data from Supabase, use it
-      if (data) {
-        setCompanyName(data.name);
-        setAddress(data.address || "");
-        setUamNumber(data.uam_number || "");
-        setPhone(data.phone || "");
-        setWebsite(data.website || "");
-        setEmail(data.email || "");
-        setLogoUrl(data.logo_url || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
-        setStampUrl(data.stamp_url || "");
-        setSlogan(data.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
-      }
-    } catch (error) {
-      console.error("Error loading company settings:", error);
-      toast.error("Failed to load company settings");
-    }
-  };
-  
-  const uploadFile = async (file: File, bucket: string, folder: string): Promise<string | null> => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${folder}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file);
-        
-      if (uploadError) {
-        console.error("Error uploading file:", uploadError);
-        return null;
-      }
-      
-      const { data } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-        
-      return data.publicUrl;
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      return null;
-    }
-  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,51 +43,16 @@ export function CompanySettings() {
       // Create new logo URL if file was uploaded
       let newLogoUrl = logoUrl;
       if (logo) {
-        const uploadedLogoUrl = await uploadFile(logo, 'company-assets', 'logos');
-        if (uploadedLogoUrl) {
-          newLogoUrl = uploadedLogoUrl;
-        } else {
-          toast.error("Failed to upload logo");
-        }
+        newLogoUrl = URL.createObjectURL(logo);
       }
       
       // Create new stamp URL if file was uploaded
       let newStampUrl = stampUrl;
       if (stamp) {
-        const uploadedStampUrl = await uploadFile(stamp, 'company-assets', 'stamps');
-        if (uploadedStampUrl) {
-          newStampUrl = uploadedStampUrl;
-        } else {
-          toast.error("Failed to upload stamp");
-        }
+        newStampUrl = URL.createObjectURL(stamp);
       }
       
-      // Update settings in Supabase
-      const { data, error } = await supabase
-        .from('company_settings')
-        .upsert({
-          id: 1, // Use 1 as the default ID for single record settings
-          name: companyName,
-          address: address,
-          uam_number: uamNumber,
-          phone: phone,
-          website: website,
-          email: email,
-          logo_url: newLogoUrl,
-          stamp_url: newStampUrl,
-          slogan: slogan,
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-        
-      if (error) {
-        console.error("Error updating company settings:", error);
-        toast.error("Failed to update company settings");
-        return;
-      }
-      
-      // Also update in local storage for compatibility
+      // Update settings
       updateCompanySettings({
         name: companyName,
         address,

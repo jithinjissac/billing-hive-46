@@ -24,7 +24,7 @@ export function addHeaderSection(
   
   // Add company logo
   try {
-    doc.addImage(companySettings.logo || companySettings.logo_url, 'JPEG', margin, 15, 40, 15);
+    doc.addImage(companySettings.logo, 'JPEG', margin, 15, 40, 15);
     doc.setFontSize(10);
     doc.setTextColor(85, 85, 85); // #555
     doc.text(companySettings.slogan, margin, 35);
@@ -37,7 +37,7 @@ export function addHeaderSection(
   doc.setTextColor(0, 0, 0);
   
   // Company information - right aligned
-  const companyInfo = `${companySettings.name}, ${companySettings.address}\nUAM No: ${companySettings.uam_number}\nPhone: ${companySettings.phone}\nWeb: ${companySettings.website}\nE-mail: ${companySettings.email}`;
+  const companyInfo = `${companySettings.name}, ${companySettings.address}\nUAM No: ${companySettings.uamNumber}\nPhone: ${companySettings.phone}\nWeb: ${companySettings.website}\nE-mail: ${companySettings.email}`;
   
   // Right align the text
   const companyInfoLines = companyInfo.split('\n');
@@ -79,8 +79,7 @@ export function addInvoiceTitleSection(
   // Right align the details
   const details = [
     `Date: ${formattedDate}`,
-    `Invoice No: ${invoice.invoiceNumber}`,
-    `Currency: ${invoice.currency || 'INR'}`
+    `Invoice No: ${invoice.invoiceNumber}`
   ];
   
   details.forEach((line, i) => {
@@ -148,11 +147,7 @@ export function addInvoiceTable(
   // Add headers with fixed positions
   doc.text("ITEM", margin + 5, 117);
   doc.text("DESCRIPTION", margin + itemColWidth + 5, 117);
-  
-  // Right align the Amount header
-  const amountHeader = "AMOUNT";
-  const amountHeaderWidth = doc.getTextWidth(amountHeader);
-  doc.text(amountHeader, pageWidth - margin - 5, 117, { align: "right" });
+  doc.text("AMOUNT", pageWidth - margin - amountColWidth + 5, 117);
   
   // Add border line after table header
   doc.line(margin, 120, pageWidth - margin, 120);
@@ -191,10 +186,10 @@ export function addInvoiceTable(
     // Amount (third column) - properly right aligned
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
-    const amount = `${currencySymbol} ${(item.quantity * item.price).toLocaleString('en-IN')}`;
+    const amount = `${currencySymbol} ${(item.quantity * item.price).toLocaleString('en-IN')}/-`;
     
     // Properly align the amount to the right
-    doc.text(amount, pageWidth - margin - 5, y + (i * 30), { align: "right" });
+    doc.text(amount, pageWidth - margin - 10, y + (i * 30), { align: "right" });
     
     // Add line after each item (except the last one)
     if (i < invoice.items.length - 1) {
@@ -209,8 +204,8 @@ export function addInvoiceTable(
   // Add the subtotal row
   doc.setFontSize(11);
   doc.text("SUB TOTAL", margin + 5, itemsEndY);
-  const subtotalAmount = `${currencySymbol} ${invoice.subtotal.toLocaleString('en-IN')}`;
-  doc.text(subtotalAmount, pageWidth - margin - 5, itemsEndY, { align: "right" });
+  const subtotalAmount = `${currencySymbol} ${invoice.subtotal.toLocaleString('en-IN')}/-`;
+  doc.text(subtotalAmount, pageWidth - margin - 10, itemsEndY, { align: "right" });
   
   // Add border line after subtotal
   doc.line(margin, itemsEndY + 5, pageWidth - margin, itemsEndY + 5);
@@ -242,13 +237,13 @@ export function addTotalSection(
   doc.rect(pageWidth - margin - 210, itemsEndY - 7, 150, 8, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
-  doc.text(amountInWords, pageWidth - margin - 205, itemsEndY - 2);
+  doc.text(`Rupees ${amountInWords}`, pageWidth - margin - 210 + 5, itemsEndY - 2);
   
   // Add the amount with teal background
   doc.setFillColor(0, 179, 179); // #00b3b3
   doc.rect(pageWidth - margin - 50, itemsEndY - 7, 50, 8, 'F');
-  const totalAmount = `${currencySymbol} ${invoice.total.toLocaleString('en-IN')}`;
-  doc.text(totalAmount, pageWidth - margin - 5, itemsEndY - 2, { align: 'right' });
+  const totalAmount = `${currencySymbol} ${invoice.total.toLocaleString('en-IN')}/-`;
+  doc.text(totalAmount, pageWidth - margin - 10, itemsEndY - 2, { align: 'right' });
   
   // Add border line after total
   doc.line(margin, itemsEndY + 5, pageWidth - margin, itemsEndY + 5);
@@ -310,9 +305,9 @@ export function addPaymentSection(
   doc.setFont("helvetica", "normal");
   
   // Add stamp if available
-  if (companySettings.stamp || companySettings.stamp_url) {
+  if (companySettings.stamp) {
     try {
-      doc.addImage(companySettings.stamp || companySettings.stamp_url, 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
+      doc.addImage(companySettings.stamp, 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
     } catch (error) {
       console.error("Could not add stamp image:", error);
     }

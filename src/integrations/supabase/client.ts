@@ -10,37 +10,3 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-
-// Create storage buckets if they don't exist
-async function createBucketsIfNotExist() {
-  try {
-    // Create company-assets bucket
-    const { data: existingBuckets, error: bucketError } = await supabase.storage.listBuckets();
-    
-    if (bucketError) {
-      console.error("Error checking existing buckets:", bucketError);
-      return;
-    }
-    
-    // Check if company-assets bucket exists
-    const assetsExists = existingBuckets?.some(bucket => bucket.name === 'company-assets');
-    
-    if (!assetsExists) {
-      const { error } = await supabase.storage.createBucket('company-assets', {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB
-      });
-      
-      if (error) {
-        console.error("Error creating company-assets bucket:", error);
-      } else {
-        console.log("Created company-assets bucket");
-      }
-    }
-  } catch (error) {
-    console.error("Error setting up storage buckets:", error);
-  }
-}
-
-// Initialize storage buckets
-createBucketsIfNotExist();

@@ -1,6 +1,5 @@
 
 import { CurrencyCode, CurrencyInfo } from "@/types/invoice";
-import { supabase } from "@/integrations/supabase/client";
 
 // Default company settings
 const defaultCompanySettings = {
@@ -54,40 +53,7 @@ const db = {
 };
 
 // Get company settings
-export async function getCompanySettingsFromDB() {
-  try {
-    const { data, error } = await supabase
-      .from('company_settings')
-      .select('*')
-      .order('id', { ascending: false })
-      .limit(1)
-      .single();
-      
-    if (error) {
-      console.error("Error fetching company settings:", error);
-      return null;
-    }
-    
-    return {
-      name: data.name,
-      address: data.address,
-      uamNumber: data.uam_number,
-      phone: data.phone,
-      website: data.website,
-      email: data.email,
-      logo: data.logo_url,
-      stamp: data.stamp_url,
-      slogan: data.slogan
-    };
-  } catch (error) {
-    console.error("Error fetching company settings:", error);
-    return null;
-  }
-}
-
-// Get company settings - compatible with existing code
 export function getCompanySettings() {
-  // First try to get from localStorage for backward compatibility
   const storedSettings = db.getItem('companySettings');
   if (storedSettings) {
     return JSON.parse(storedSettings);
@@ -100,39 +66,7 @@ export function updateCompanySettings(settings: typeof defaultCompanySettings) {
   return db.setItem('companySettings', JSON.stringify(settings));
 }
 
-// Get invoice settings from DB
-export async function getInvoiceSettingsFromDB() {
-  try {
-    const { data, error } = await supabase
-      .from('invoice_settings')
-      .select('*')
-      .order('id', { ascending: false })
-      .limit(1)
-      .single();
-      
-    if (error) {
-      console.error("Error fetching invoice settings:", error);
-      return null;
-    }
-    
-    return {
-      invoicePrefix: data.invoice_prefix,
-      defaultDueDays: data.default_due_days,
-      defaultTaxRate: data.default_tax_rate,
-      accentColor: "#00b3b3", // Hardcoded for now
-      defaultNotes: data.default_notes,
-      footerText: data.footer_text,
-      template: "modern", // Hardcoded for now
-      defaultCurrency: data.default_currency as CurrencyCode,
-      notes: data.notes
-    };
-  } catch (error) {
-    console.error("Error fetching invoice settings:", error);
-    return null;
-  }
-}
-
-// Get invoice settings compatible with existing code
+// Get invoice settings
 export function getInvoiceSettings() {
   const storedSettings = db.getItem('invoiceSettings');
   if (storedSettings) {
