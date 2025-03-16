@@ -46,17 +46,23 @@ serve(async (req) => {
       
       if (error) throw error;
       
-      const { error: policyError } = await supabaseAdmin
-        .storage.from('profile-pictures')
-        .createPolicy('Allow authenticated uploads', {
-          name: 'Allow authenticated uploads',
-          definition: `
-            (bucket_id = 'profile-pictures'::text) AND
-            (auth.role() = 'authenticated'::text)
-          `
-        });
-      
-      if (policyError) throw policyError;
+      // Create policy to allow authenticated users to upload their own files
+      try {
+        const { error: policyError } = await supabaseAdmin
+          .storage.from('profile-pictures')
+          .createPolicy('Allow authenticated uploads', {
+            name: 'Allow authenticated uploads',
+            definition: `
+              (bucket_id = 'profile-pictures'::text) AND
+              (auth.role() = 'authenticated'::text)
+            `
+          });
+        
+        if (policyError) console.error("Policy creation error:", policyError);
+      } catch (policyErr) {
+        console.error("Error creating policy:", policyErr);
+        // Continue execution even if policy creation fails
+      }
       
       return new Response(
         JSON.stringify({ message: "Profile pictures bucket created successfully" }),

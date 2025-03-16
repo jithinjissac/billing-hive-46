@@ -1,4 +1,3 @@
-
 import { useState, useEffect, ChangeEvent, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -90,19 +89,11 @@ const Profile = () => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
-      // Ensure profile-pictures bucket exists
+      // Ensure profile-pictures bucket exists by calling the edge function
       try {
-        const { data: bucketData, error: bucketError } = await supabase
-          .storage
-          .getBucket('profile-pictures');
-          
-        if (bucketError && bucketError.message.includes('not found')) {
-          await supabase.storage.createBucket('profile-pictures', {
-            public: true
-          });
-        }
+        await supabase.functions.invoke("create-storage-bucket");
       } catch (error) {
-        console.error("Error checking/creating bucket:", error);
+        console.error("Error creating bucket via edge function:", error);
       }
       
       const { error: uploadError, data } = await supabase.storage
