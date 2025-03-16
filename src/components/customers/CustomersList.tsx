@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Table, 
   TableBody, 
@@ -16,20 +16,58 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Edit, MoreHorizontal, Trash } from "lucide-react";
-import { dummyCustomers } from "@/data/dummyData";
 import { toast } from "sonner";
 import { CustomerDialog } from "./CustomerDialog";
 import { Customer } from "@/types/invoice";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CustomersListProps {
   searchQuery: string;
 }
 
 export function CustomersList({ searchQuery }: CustomersListProps) {
-  const [customers, setCustomers] = useState(dummyCustomers);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+  
+  const fetchCustomers = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('name', { ascending: true });
+        
+      if (error) {
+        console.error("Error fetching customers:", error);
+        toast.error("Failed to load customers");
+        return;
+      }
+      
+      const customersData: Customer[] = data.map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email || '',
+        phone: c.phone || '',
+        address: c.address || ''
+      }));
+      
+      setCustomers(customersData);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      toast.error("Failed to load customers");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // Filter customers based on search query
   const filteredCustomers = customers.filter(customer => 
@@ -43,9 +81,25 @@ export function CustomersList({ searchQuery }: CustomersListProps) {
     setIsEditDialogOpen(true);
   };
   
-  const handleDelete = (id: string) => {
-    setCustomers(customers.filter(customer => customer.id !== id));
-    toast.success("Customer deleted successfully");
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error("Error deleting customer:", error);
+        toast.error("Failed to delete customer");
+        return;
+      }
+      
+      setCustomers(customers.filter(customer => customer.id !== id));
+      toast.success("Customer deleted successfully");
+    } catch (error) {
+      console.error("Error deleting customer:", error);
+      toast.error("Failed to delete customer");
+    }
   };
   
   const handleCustomerUpdated = (updatedCustomer: Customer) => {
@@ -54,8 +108,36 @@ export function CustomersList({ searchQuery }: CustomersListProps) {
     ));
     setEditingCustomer(null);
     setIsEditDialogOpen(false);
-    toast.success("Customer updated successfully");
   };
+  
+  if (isLoading) {
+    return (
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Address</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[...Array(5)].map((_, index) => (
+              <TableRow key={index}>
+                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-full ml-auto" /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
   
   return (
     <>

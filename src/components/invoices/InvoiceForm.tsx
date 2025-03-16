@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +51,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
   const [notes, setNotes] = useState(invoice?.notes || defaultSettings.defaultNotes);
   const [currency, setCurrency] = useState<CurrencyCode>(invoice?.currency as CurrencyCode || defaultSettings.defaultCurrency);
   const [discount, setDiscount] = useState(invoice?.discount || 0);
-  const [isTaxEnabled, setIsTaxEnabled] = useState(invoice?.isTaxEnabled !== false);
+  const [isTaxEnabled, setIsTaxEnabled] = useState(invoice?.isTaxEnabled === true);
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   
   const [subtotal, setSubtotal] = useState(0);

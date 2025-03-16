@@ -1,4 +1,5 @@
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -7,9 +8,51 @@ import { RecentInvoices } from "@/components/dashboard/RecentInvoices";
 import { InvoiceStats } from "@/components/dashboard/InvoiceStats";
 import { MoveRight, Plus } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState({
+    totalInvoices: 0,
+    paidInvoices: 0,
+    pendingInvoices: 0,
+    overdueInvoices: 0
+  });
+  
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+  
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch all invoices
+      const { data: invoices, error } = await supabase
+        .from('invoices')
+        .select('id, status');
+      
+      if (error) throw error;
+      
+      // Calculate dashboard metrics
+      const totalCount = invoices?.length || 0;
+      const paidCount = invoices?.filter(inv => inv.status === 'paid').length || 0;
+      const pendingCount = invoices?.filter(inv => inv.status === 'pending').length || 0;
+      const overdueCount = invoices?.filter(inv => inv.status === 'overdue').length || 0;
+      
+      setDashboardData({
+        totalInvoices: totalCount,
+        paidInvoices: paidCount,
+        pendingInvoices: pendingCount,
+        overdueInvoices: overdueCount
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   return (
     <DashboardLayout>
@@ -27,27 +70,23 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <TotalsWidget 
           title="Total Invoices" 
-          value={42} 
-          change={8} 
-          trend="up" 
+          value={dashboardData.totalInvoices} 
+          isLoading={isLoading}
         />
         <TotalsWidget 
           title="Paid Invoices" 
-          value={36} 
-          change={5} 
-          trend="up" 
+          value={dashboardData.paidInvoices}
+          isLoading={isLoading}
         />
         <TotalsWidget 
           title="Pending Invoices" 
-          value={4} 
-          change={-2} 
-          trend="down" 
+          value={dashboardData.pendingInvoices}
+          isLoading={isLoading}
         />
         <TotalsWidget 
           title="Overdue Invoices" 
-          value={2} 
-          change={-1} 
-          trend="down" 
+          value={dashboardData.overdueInvoices}
+          isLoading={isLoading}
         />
       </div>
       
