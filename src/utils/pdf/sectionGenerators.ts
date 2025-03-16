@@ -37,7 +37,7 @@ export function addHeaderSection(
   doc.setTextColor(0, 0, 0);
   
   // Company information - right aligned
-  const companyInfo = `${companySettings.name}, ${companySettings.address}\nUAM No: ${companySettings.uamNumber}\nPhone: ${companySettings.phone}\nWeb: ${companySettings.website}\nE-mail: ${companySettings.email}`;
+  const companyInfo = `${companySettings.name}, ${companySettings.address}\nUAM No: ${companySettings.uamNumber}\nPhone : ${companySettings.phone}\nWeb : ${companySettings.website}\nE-mail : ${companySettings.email}`;
   
   // Right align the text
   const companyInfoLines = companyInfo.split('\n');
@@ -78,8 +78,8 @@ export function addInvoiceTitleSection(
   
   // Right align the details
   const details = [
-    `Date: ${formattedDate}`,
-    `Invoice No: ${invoice.invoiceNumber}`
+    `Date : ${formattedDate}`,
+    `Invoice No : ${invoice.invoiceNumber}`
   ];
   
   details.forEach((line, i) => {
@@ -133,21 +133,14 @@ export function addInvoiceTable(
 ): number {
   const { pageWidth, margin, contentWidth } = positions;
   
-  // Improved column widths for better alignment
-  const itemColWidth = contentWidth * 0.40; // 40% for item description
-  const descColWidth = contentWidth * 0.40; // 40% for specs
-  const amountColWidth = contentWidth * 0.20; // 20% for amount
-  
   // Table header - items, description, amount
   doc.setFillColor(249, 249, 249); // #f9f9f9
   doc.rect(margin, 110, contentWidth, 10, 'F');
   doc.setTextColor(102, 102, 102); // #666
   doc.setFontSize(11);
-  
-  // Add headers with fixed positions
   doc.text("ITEM", margin + 5, 117);
-  doc.text("DESCRIPTION", margin + itemColWidth + 5, 117);
-  doc.text("AMOUNT", pageWidth - margin - amountColWidth + 5, 117);
+  doc.text("DESCRIPTION", pageWidth / 2 - 10, 117);
+  doc.text("AMOUNT", pageWidth - margin - 25, 117);
   
   // Add border line after table header
   doc.line(margin, 120, pageWidth - margin, 120);
@@ -158,7 +151,7 @@ export function addInvoiceTable(
   
   // Process each invoice item
   invoice.items.forEach((item, i) => {
-    // Item description (first column)
+    // Add item description (left column)
     let itemY = y + (i * 30);
     doc.setFontSize(11);
     
@@ -168,10 +161,10 @@ export function addInvoiceTable(
       item.description,
       margin + 5,
       itemY,
-      itemColWidth - 10
+      contentWidth / 3 - 10
     );
     
-    // Specs (second column)
+    // Add specs if available (middle column)
     if (item.specs && item.specs.length > 0) {
       doc.setFontSize(10);
       doc.setTextColor(102, 102, 102); // #666
@@ -179,17 +172,16 @@ export function addInvoiceTable(
       let specsY = y + (i * 30);
       item.specs.forEach((spec) => {
         specsY += 5;
-        doc.text(`• ${spec}`, margin + itemColWidth + 5, specsY);
+        doc.text(`• ${spec}`, pageWidth / 2 - 10, specsY);
       });
     }
     
-    // Amount (third column) - properly right aligned
+    // Add amount (right column)
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     const amount = `${currencySymbol} ${(item.quantity * item.price).toLocaleString('en-IN')}/-`;
-    
-    // Properly align the amount to the right
-    doc.text(amount, pageWidth - margin - 10, y + (i * 30), { align: "right" });
+    const amountWidth = doc.getTextWidth(amount);
+    doc.text(amount, pageWidth - margin - amountWidth, y + (i * 30));
     
     // Add line after each item (except the last one)
     if (i < invoice.items.length - 1) {
@@ -205,7 +197,8 @@ export function addInvoiceTable(
   doc.setFontSize(11);
   doc.text("SUB TOTAL", margin + 5, itemsEndY);
   const subtotalAmount = `${currencySymbol} ${invoice.subtotal.toLocaleString('en-IN')}/-`;
-  doc.text(subtotalAmount, pageWidth - margin - 10, itemsEndY, { align: "right" });
+  const subtotalWidth = doc.getTextWidth(subtotalAmount);
+  doc.text(subtotalAmount, pageWidth - margin - subtotalWidth, itemsEndY);
   
   // Add border line after subtotal
   doc.line(margin, itemsEndY + 5, pageWidth - margin, itemsEndY + 5);
@@ -333,7 +326,6 @@ export function addFooterSection(
   
   // Thank you message
   doc.setFontSize(16);
-  doc.setTextColor(0, 0, 0);
   doc.text(invoiceSettings.defaultNotes, pageWidth / 2, paymentEndY + 10, { align: 'center' });
   
   // Add border lines above and below thank you message
