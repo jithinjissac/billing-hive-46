@@ -101,11 +101,18 @@ export function addInvoiceTitleSection(
   
   // Format the date properly
   const formattedDate = formatDate(invoice.date);
+  const formattedDueDate = invoice.dueDate ? formatDate(invoice.dueDate) : '';
   
-  // Right align the details with bold for date and invoice number
+  // Right align the details with bold for labels
   doc.setFont("helvetica", "bold");
   doc.text("Date:", pageWidth - margin - doc.getTextWidth("Date: " + formattedDate), currentY + 8);
   doc.text("Invoice No:", pageWidth - margin - doc.getTextWidth("Invoice No: " + invoice.invoiceNumber), currentY + 13);
+  
+  // Add due date if available
+  if (invoice.dueDate) {
+    doc.text("Due Date:", pageWidth - margin - doc.getTextWidth("Due Date: " + formattedDueDate), currentY + 18);
+  }
+  
   doc.setFont("helvetica", "normal");
   
   // Right align the values
@@ -115,9 +122,16 @@ export function addInvoiceTitleSection(
   doc.text(formattedDate, dateX, currentY + 8);
   doc.text(invoice.invoiceNumber, invoiceNoX, currentY + 13);
   
-  // Add currency if available
+  // Add due date value if available
+  if (invoice.dueDate) {
+    const dueDateX = pageWidth - margin - doc.getTextWidth(formattedDueDate) + doc.getTextWidth("Due Date: ");
+    doc.text(formattedDueDate, dueDateX, currentY + 18);
+  }
+  
+  // Add currency if available (at the bottom if due date is present, or in place of due date)
   if (invoice.currency) {
-    doc.text(`Currency: ${invoice.currency}`, pageWidth - margin - doc.getTextWidth(`Currency: ${invoice.currency}`), currentY + 18);
+    const currencyY = invoice.dueDate ? currentY + 23 : currentY + 18;
+    doc.text(`Currency: ${invoice.currency}`, pageWidth - margin - doc.getTextWidth(`Currency: ${invoice.currency}`), currencyY);
   }
 }
 
@@ -148,12 +162,27 @@ export function addClientSection(
   // Add the customer name first
   doc.text(invoice.customer.name, margin, currentY + 15);
   
+  // Add email and phone if available
+  let contactY = currentY + 20;
+  if (invoice.customer.email) {
+    doc.setFont("helvetica", "normal");
+    doc.text(invoice.customer.email, margin, contactY);
+    contactY += 5;
+  }
+  
+  if (invoice.customer.phone) {
+    doc.setFont("helvetica", "normal");
+    doc.text(invoice.customer.phone, margin, contactY);
+    contactY += 5;
+  }
+  
   // Split address into lines and add them
   const clientInfoLines = invoice.customer.address.split(',');
   
   // Add each line of the address
   clientInfoLines.forEach((line, i) => {
-    doc.text(line.trim(), margin, currentY + 20 + (i * 5));
+    doc.setFont("helvetica", "normal");
+    doc.text(line.trim(), margin, contactY + (i * 5));
   });
   
   // Reset font to normal
@@ -221,6 +250,9 @@ export function addInvoiceTable(
         itemY,
         itemColWidth - 10
       );
+    } else {
+      // If no name, add a placeholder
+      doc.text("Unnamed Item", margin + 5, itemY);
     }
     
     doc.setFont("helvetica", "normal");
@@ -279,9 +311,26 @@ export function addInvoiceTable(
   doc.text("SUB TOTAL", margin + 5, itemsEndY);
   const subtotalAmount = formatCurrency(invoice.subtotal, invoice.currency as CurrencyCode);
   doc.text(subtotalAmount, pageWidth - margin - 5, itemsEndY, { align: "right" });
+  
+  // Add tax row if applicable
+  if (invoice.tax && invoice.tax > 0) {
+    itemsEndY += 10;
+    doc.text("TAX", margin + 5, itemsEndY);
+    const taxAmount = formatCurrency(invoice.tax, invoice.currency as CurrencyCode);
+    doc.text(taxAmount, pageWidth - margin - 5, itemsEndY, { align: "right" });
+  }
+  
+  // Add discount row if applicable
+  if (invoice.discount && invoice.discount > 0) {
+    itemsEndY += 10;
+    doc.text("DISCOUNT", margin + 5, itemsEndY);
+    const discountAmount = "-" + formatCurrency(invoice.discount, invoice.currency as CurrencyCode);
+    doc.text(discountAmount, pageWidth - margin - 5, itemsEndY, { align: "right" });
+  }
+  
   doc.setFont("helvetica", "normal");
   
-  // Add border line after subtotal
+  // Add border line after subtotal/tax/discount
   doc.line(margin, itemsEndY + 5, pageWidth - margin, itemsEndY + 5);
   
   return itemsEndY + 10;
@@ -452,15 +501,25 @@ export function addFooterSection(
   doc.setFontSize(11);
   doc.text("Note:", margin + 5, currentY + 50);
   
-  // Add notes from settings
+  // Process invoice notes
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  const notes = invoiceSettings.notes || [
-    "Upgrading the current cloud hosting service plans are extra payable as per the client requirements.",
-    "Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters."
-  ];
   
-  notes.forEach((note, i) => {
-    doc.text(`• ${note}`, margin + 15, currentY + 50 + ((i + 1) * 6));
-  });
+  // Use invoice notes if available, otherwise fallback to settings notes
+  const invoiceNotes = Array.isArray(invoice.notes) 
+    ? invoice.notes 
+    : (typeof invoice.notes === 'string' && invoice.notes.trim() !== ''
+        ? invoice.notes.split('\n').filter(note => note.trim() !== '')
+        : invoiceSettings.notes || [
+            "Upgrading the current cloud hosting service plans are extra payable as per the client requirements.",
+            "Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters."
+          ]);
+  
+  if (invoiceNotes.length > 0) {
+    invoiceNotes.forEach((note, i) => {
+      doc.text(`• ${note}`, margin + 15, currentY + 50 + ((i + 1) * 6));
+    });
+  } else {
+    doc.text("• No additional notes for this invoice.", margin + 15, currentY + 56);
+  }
 }

@@ -86,8 +86,12 @@ export function InvoiceDetails({
   const logoUrl = logoError ? defaultLogoUrl : (companySettings.logo || defaultLogoUrl);
   const stampUrl = stampError ? defaultStampUrl : (companySettings.stamp || defaultStampUrl);
 
-  // Parse notes from the invoice (which should be a \n separated string)
-  const invoiceNotes = invoice.notes ? invoice.notes.split('\n').filter(note => note.trim() !== '') : [];
+  // Parse notes from the invoice
+  const invoiceNotes = Array.isArray(invoice.notes) 
+    ? invoice.notes 
+    : (typeof invoice.notes === 'string' 
+        ? invoice.notes.split('\n').filter(note => note.trim() !== '') 
+        : []);
 
   console.log("Company settings in InvoiceDetails:", companySettings);
   console.log("Logo URL:", logoUrl);
@@ -130,7 +134,8 @@ export function InvoiceDetails({
           <p>
             <span className="font-bold">Date: </span>{formatDate(invoice.date)}<br />
             <span className="font-bold">Invoice No: </span>{invoice.invoiceNumber}<br />
-            {invoice.currency && `Currency: ${invoice.currency}`}
+            {invoice.dueDate && <><span className="font-bold">Due Date: </span>{formatDate(invoice.dueDate)}<br /></>}
+            {invoice.currency && <><span className="font-bold">Currency: </span>{invoice.currency}</>}
           </p>
         </div>
       </div>
@@ -139,7 +144,9 @@ export function InvoiceDetails({
         <div className="inline-block px-4 py-1 mb-2 bg-[#00b3b3] text-white text-sm">BILL TO</div>
         <p className="text-sm">
           <span className="font-bold">{invoice.customer.name}</span><br />
-          <span className="font-bold">{invoice.customer.address.split(',').join(',\n')}</span>
+          {invoice.customer.email && <>{invoice.customer.email}<br /></>}
+          {invoice.customer.phone && <>{invoice.customer.phone}<br /></>}
+          <span className="whitespace-pre-line">{invoice.customer.address}</span>
         </p>
       </div>
       
@@ -155,7 +162,7 @@ export function InvoiceDetails({
           {invoice.items.map((item) => (
             item.quantity > 0 ? (
               <TableRow key={item.id}>
-                <TableCell className="align-top font-medium">{item.name}</TableCell>
+                <TableCell className="align-top font-medium">{item.name || 'Unnamed Item'}</TableCell>
                 <TableCell className="align-top">
                   {item.description}
                   {item.specs && item.specs.length > 0 ? (
@@ -177,6 +184,20 @@ export function InvoiceDetails({
             <TableCell></TableCell>
             <TableCell className="text-right">{formatCurrency(invoice.subtotal, invoice.currency as any)}</TableCell>
           </TableRow>
+          {invoice.tax > 0 && (
+            <TableRow>
+              <TableCell>TAX</TableCell>
+              <TableCell></TableCell>
+              <TableCell className="text-right">{formatCurrency(invoice.tax, invoice.currency as any)}</TableCell>
+            </TableRow>
+          )}
+          {invoice.discount && invoice.discount > 0 && (
+            <TableRow>
+              <TableCell>DISCOUNT</TableCell>
+              <TableCell></TableCell>
+              <TableCell className="text-right">-{formatCurrency(invoice.discount, invoice.currency as any)}</TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
       
