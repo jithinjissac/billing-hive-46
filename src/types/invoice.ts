@@ -1,8 +1,11 @@
 
-// If this file contains more than just the Invoice type, make sure to include those as well
-// This is just updating the InvoiceItem interface to add the name property
-
 export type CurrencyCode = "INR" | "USD" | "GBP" | "AUD";
+
+export interface CurrencyInfo {
+  code: CurrencyCode;
+  symbol: string;
+  name: string;
+}
 
 export interface PaymentDetails {
   accountHolder: string;
