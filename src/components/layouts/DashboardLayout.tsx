@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -17,6 +17,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Redirect if user is not authenticated
   useEffect(() => {
@@ -24,6 +25,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       navigate('/auth/login');
     }
   }, [user, isLoading, navigate]);
+  
+  const closeSidebar = () => setSidebarOpen(false);
   
   if (isMobile) {
     return (
@@ -37,14 +40,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             />
             <span className="ml-2 font-bold text-lg">TechiusPay</span>
           </div>
-          <Sheet>
+          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
-              <Sidebar showCloseButton={true} />
+              <Sidebar showCloseButton={true} onClose={closeSidebar} />
             </SheetContent>
           </Sheet>
         </div>

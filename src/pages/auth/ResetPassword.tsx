@@ -52,16 +52,16 @@ const ResetPassword = () => {
           <img
             src={logoUrl}
             alt="TechiusPay Logo"
-            className="h-14 w-auto mx-auto mb-2"
+            className="h-16 w-auto mx-auto mb-3"
           />
-          <h1 className="text-2xl font-bold">TechiusPay</h1>
+          <h1 className="text-2xl font-bold text-gray-800">TechiusPay</h1>
           <p className="text-sm text-muted-foreground">Invoice Management System</p>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Reset Password</CardTitle>
-            <CardDescription>
+        <Card className="shadow-lg border-gray-200">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-xl text-center">Reset Password</CardTitle>
+            <CardDescription className="text-center">
               Enter your email to receive a password reset link
             </CardDescription>
           </CardHeader>
@@ -77,11 +77,12 @@ const ResetPassword = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="h-11"
                   />
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full h-11" disabled={isLoading}>
                   {isLoading ? (
                     <span className="flex items-center">
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -103,20 +104,23 @@ const ResetPassword = () => {
               </CardFooter>
             </form>
           ) : (
-            <CardContent className="space-y-4">
-              <div className="bg-green-50 p-4 rounded-md text-green-700 text-center">
-                <p className="font-medium mb-2">Reset link sent!</p>
-                <p className="text-sm">Check your email for the password reset link.</p>
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="rounded-full bg-green-100 w-16 h-16 flex items-center justify-center mx-auto mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
               </div>
-              <Button 
-                asChild 
-                variant="outline" 
-                className="w-full mt-4"
-              >
-                <Link to="/auth/login">
-                  Back to Login
-                </Link>
-              </Button>
+              <h3 className="text-xl font-semibold text-gray-800">Reset Link Sent!</h3>
+              <p className="text-gray-600">
+                Check your email ({email}) for instructions on how to reset your password.
+              </p>
+              <div className="pt-4">
+                <Button asChild variant="outline" className="w-full">
+                  <Link to="/auth/login">
+                    Back to Login
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           )}
         </Card>

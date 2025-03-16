@@ -8,11 +8,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
@@ -36,7 +38,26 @@ const Login = () => {
       if (error) {
         console.error("Login error:", error);
         
-        if (error.message.includes("Invalid login credentials")) {
+        if (error.message.includes("Email not confirmed")) {
+          toast.error("Please confirm your email before logging in", {
+            description: "Check your inbox for a confirmation email",
+            action: {
+              label: "Resend",
+              onClick: async () => {
+                const { error: resendError } = await supabase.auth.resend({
+                  type: 'signup',
+                  email,
+                });
+                if (resendError) {
+                  toast.error("Failed to resend confirmation email");
+                } else {
+                  toast.success("Confirmation email resent");
+                }
+              }
+            }
+          });
+          return;
+        } else if (error.message.includes("Invalid login credentials")) {
           toast.error("Invalid email or password");
         } else {
           toast.error(error.message);
@@ -63,17 +84,17 @@ const Login = () => {
           <img
             src={logoUrl}
             alt="TechiusPay Logo"
-            className="h-14 w-auto mx-auto mb-2"
+            className="h-16 w-auto mx-auto mb-3"
           />
-          <h1 className="text-2xl font-bold">TechiusPay</h1>
+          <h1 className="text-2xl font-bold text-gray-800">TechiusPay</h1>
           <p className="text-sm text-muted-foreground">Invoice Management System</p>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Login</CardTitle>
-            <CardDescription>
-              Enter your email and password to access your account
+        <Card className="shadow-lg border-gray-200">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-xl text-center">Welcome Back</CardTitle>
+            <CardDescription className="text-center">
+              Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
@@ -87,6 +108,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="h-11"
                 />
               </div>
               <div className="space-y-2">
@@ -96,18 +118,30 @@ const Login = () => {
                     Forgot password?
                   </Link>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-11 pr-10"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-0 top-0 h-11 w-11"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full h-11" disabled={isLoading}>
                 {isLoading ? (
                   <span className="flex items-center">
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -123,7 +157,7 @@ const Login = () => {
               <div className="text-center text-sm">
                 Don't have an account?{" "}
                 <Link to="/auth/signup" className="text-primary hover:underline font-medium">
-                  Sign up
+                  Create an account
                 </Link>
               </div>
             </CardFooter>

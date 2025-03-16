@@ -7,12 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Eye, EyeOff } from "lucide-react";
 
 const UpdatePassword = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
   
@@ -78,17 +81,17 @@ const UpdatePassword = () => {
           <img
             src={logoUrl}
             alt="TechiusPay Logo"
-            className="h-14 w-auto mx-auto mb-2"
+            className="h-16 w-auto mx-auto mb-3"
           />
-          <h1 className="text-2xl font-bold">TechiusPay</h1>
+          <h1 className="text-2xl font-bold text-gray-800">TechiusPay</h1>
           <p className="text-sm text-muted-foreground">Invoice Management System</p>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Update Password</CardTitle>
-            <CardDescription>
-              Enter your new password
+        <Card className="shadow-lg border-gray-200">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-xl text-center">Update Password</CardTitle>
+            <CardDescription className="text-center">
+              Create a new password for your account
             </CardDescription>
           </CardHeader>
           {!isSuccess ? (
@@ -96,33 +99,57 @@ const UpdatePassword = () => {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="password">New Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="h-11 pr-10"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-0 top-0 h-11 w-11"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Must be at least 6 characters long
                   </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="h-11 pr-10"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-0 top-0 h-11 w-11"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full h-11" disabled={isLoading}>
                   {isLoading ? (
                     <span className="flex items-center">
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -138,20 +165,23 @@ const UpdatePassword = () => {
               </CardFooter>
             </form>
           ) : (
-            <CardContent className="space-y-4">
-              <div className="bg-green-50 p-4 rounded-md text-green-700 text-center">
-                <p className="font-medium mb-2">Password Updated!</p>
-                <p className="text-sm">Your password has been updated successfully. You will be redirected to the login page shortly.</p>
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="rounded-full bg-green-100 w-16 h-16 flex items-center justify-center mx-auto mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
               </div>
-              <Button 
-                asChild 
-                variant="outline" 
-                className="w-full mt-4"
-              >
-                <Link to="/auth/login">
-                  Back to Login
-                </Link>
-              </Button>
+              <h3 className="text-xl font-semibold text-gray-800">Password Updated!</h3>
+              <p className="text-gray-600">
+                Your password has been updated successfully. You will be redirected to the login page shortly.
+              </p>
+              <div className="pt-4">
+                <Button asChild variant="outline" className="w-full">
+                  <Link to="/auth/login">
+                    Back to Login
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           )}
         </Card>
