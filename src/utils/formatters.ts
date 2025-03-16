@@ -1,6 +1,6 @@
 
 /**
- * Format a number as currency
+ * Format a number as currency in INR format
  */
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -8,7 +8,7 @@ export function formatCurrency(amount: number): string {
     currency: 'INR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(amount).replace("₹", "₹ "); // Add space after ₹ symbol to match design
 }
 
 /**

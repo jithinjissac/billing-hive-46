@@ -65,23 +65,24 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
   const margin = 15;
   const contentWidth = pageWidth - (margin * 2);
   
-  // Header section with logo and company details
+  // Header section - Company logo and details
+  const headerHeight = 30;
   doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, pageWidth, 30, 'F');
+  doc.rect(margin, margin, contentWidth, headerHeight, 'F');
   
   // Add Techius Solutions header text
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 136, 204); // #0088cc
   doc.setFontSize(24);
-  doc.text("TECHIUS", margin + 30, 15);
+  doc.text("TECHIUS", margin + 30, margin + 10);
   
   doc.setTextColor(255, 204, 0); // #ffcc00
   doc.setFontSize(20);
-  doc.text("SOLUTIONS", margin + 30, 22);
+  doc.text("SOLUTIONS", margin + 30, margin + 17);
   
   doc.setFontSize(10);
   doc.setTextColor(102, 102, 102); // #666
-  doc.text("EXPERIENCE THE DIGITAL INNOVATION", margin + 30, 28);
+  doc.text("EXPERIENCE THE DIGITAL INNOVATION", margin + 30, margin + 22);
   
   // Add company details on the right
   doc.setFontSize(12);
@@ -97,7 +98,7 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
   ];
   
   companyInfo.forEach((item, index) => {
-    const y = 10 + (index * 5);
+    const y = margin + 5 + (index * 5);
     // Calculate text width for right alignment
     const textWidth = doc.getTextWidth(item.label + item.value);
     doc.setFont("helvetica", "bold");
@@ -109,50 +110,52 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
   // Add teal border line
   doc.setDrawColor(0, 179, 179); // #00b3b3
   doc.setLineWidth(1);
-  doc.line(margin, 30, pageWidth - margin, 30);
+  doc.line(margin, margin + headerHeight, pageWidth - margin, margin + headerHeight);
   
   // Invoice title and customer section
+  const invoiceTitleY = margin + headerHeight + 5;
   doc.setFillColor(249, 249, 249); // #f9f9f9
-  doc.rect(margin, 35, contentWidth, 35, 'F');
+  doc.rect(margin, invoiceTitleY, contentWidth, 35, 'F');
   
   doc.setTextColor(102, 102, 102); // #666
   doc.setFontSize(28);
   doc.setFont("helvetica", "normal");
-  doc.text("INVOICE", margin + 5, 45);
+  doc.text("INVOICE", margin + 5, invoiceTitleY + 10);
   
   // Bill To section
   doc.setFillColor(0, 179, 179); // #00b3b3
-  doc.rect(margin + 5, 50, 30, 8, 'F');
+  doc.rect(margin + 5, invoiceTitleY + 15, 30, 8, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("BILL TO", margin + 7, 56);
+  doc.text("BILL TO", margin + 7, invoiceTitleY + 21);
   
   // Customer information
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(invoice.customer.name, margin + 5, 65);
+  doc.text(invoice.customer.name, margin + 5, invoiceTitleY + 30);
   
+  const addressLines = invoice.customer.address.split(',');
   doc.setFont("helvetica", "normal");
-  doc.text(invoice.customer.address.split(',')[0], margin + 5, 70);
-  if (invoice.customer.address.includes(',')) {
-    doc.text(invoice.customer.address.split(',').slice(1).join(','), margin + 5, 75);
+  doc.text(addressLines[0], margin + 5, invoiceTitleY + 35);
+  if (addressLines.length > 1) {
+    doc.text(addressLines.slice(1).join(','), margin + 5, invoiceTitleY + 40);
   }
   
   // Invoice details on the right
   doc.setFont("helvetica", "bold");
-  doc.text("Date :", pageWidth - margin - 70, 45);
+  doc.text("Date :", pageWidth - margin - 70, invoiceTitleY + 10);
   doc.setFont("helvetica", "normal");
-  doc.text(formatDate(invoice.date), pageWidth - margin - 40, 45);
+  doc.text(formatDate(invoice.date), pageWidth - margin - 40, invoiceTitleY + 10);
   
   doc.setFont("helvetica", "bold");
-  doc.text("Invoice No :", pageWidth - margin - 70, 52);
+  doc.text("Invoice No :", pageWidth - margin - 70, invoiceTitleY + 17);
   doc.setFont("helvetica", "normal");
-  doc.text(invoice.invoiceNumber, pageWidth - margin - 40, 52);
+  doc.text(invoice.invoiceNumber, pageWidth - margin - 40, invoiceTitleY + 17);
   
   // Invoice items section - header
-  const tableStartY = 80;
+  const tableStartY = invoiceTitleY + 45;
   doc.setDrawColor(221, 221, 221); // #ddd
   doc.setLineWidth(0.5);
   doc.line(margin, tableStartY, pageWidth - margin, tableStartY);
@@ -167,10 +170,10 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
   let y = tableStartY + 10;
   
   if (invoice.items.length > 0) {
-    // Group items if needed or show them individually
+    // Group header
     doc.setTextColor(0, 102, 204); // #0066cc
     doc.setFont("helvetica", "bold");
-    doc.text("Invoice items", margin, y);
+    doc.text(`${invoice.customer.name} Website Annual Charges`, margin, y);
     y += 10;
     
     // Individual items
@@ -198,7 +201,7 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
   doc.line(margin, y, pageWidth - margin, y);
   y += 10;
   
-  // Tax (displaying as discount in this template)
+  // Discount (using tax field from the invoice as discount)
   doc.text("DISCOUNT", margin, y);
   doc.setFont("helvetica", "normal");
   doc.text(formatCurrency(invoice.tax), pageWidth - margin, y, { align: "right" });
@@ -215,13 +218,12 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
   
   // Amount in words box
   const amountInWords = convertNumberToWords(invoice.total);
-  const wordsBoxWidth = doc.getTextWidth(`Rupees ${amountInWords}`) + 10;
   
   doc.setFillColor(102, 102, 102); // #666
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
-  doc.roundedRect(pageWidth - margin - wordsBoxWidth - 30, y - 5, wordsBoxWidth, 8, 1, 1, 'F');
-  doc.text(`Rupees ${amountInWords}`, pageWidth - margin - wordsBoxWidth/2 - 30, y, { align: "center" });
+  doc.roundedRect(pageWidth - margin - 100, y - 5, 70, 8, 1, 1, 'F');
+  doc.text(`Rupees ${amountInWords}`, pageWidth - margin - 65, y, { align: "center" });
   
   // Amount box
   doc.setFillColor(0, 179, 179); // #00b3b3
@@ -244,12 +246,22 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
   
   // Account details
   doc.setFontSize(12);
+  
+  // Use invoice payment details if available, otherwise use default
+  const paymentDetails = invoice.paymentDetails || {
+    accountHolder: "Jithin Jacob Issac",
+    bankName: "Federal Bank",
+    accountNumber: "99980111697400",
+    ifsc: "FDRL0001443",
+    branch: "Mallappally"
+  };
+  
   const accountDetails = [
-    { label: "Account Holder:", value: " Jithin Jacob Issac" },
-    { label: "Bank Name:", value: " Federal Bank" },
-    { label: "Account Number:", value: " 99980111697400" },
-    { label: "IFSC:", value: " FDRL0001443" },
-    { label: "Branch:", value: " Mallappally" }
+    { label: "Account Holder:", value: ` ${paymentDetails.accountHolder}` },
+    { label: "Bank Name:", value: ` ${paymentDetails.bankName}` },
+    { label: "Account Number:", value: ` ${paymentDetails.accountNumber}` },
+    { label: "IFSC:", value: ` ${paymentDetails.ifsc}` },
+    { label: "Branch:", value: ` ${paymentDetails.branch}` }
   ];
   
   accountDetails.forEach((detail, index) => {
@@ -261,9 +273,9 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
   
   // Signature
   doc.setFont("helvetica", "normal");
-  doc.text("For Techius Solutions ,", pageWidth - margin - 45, y);
+  doc.text("For Techius Solutions ,", pageWidth - margin - 50, y);
   doc.setFont("helvetica", "bold");
-  doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 45, y + 10);
+  doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 50, y + 10);
   
   // Thank you message
   const thankYouY = y + 60;
