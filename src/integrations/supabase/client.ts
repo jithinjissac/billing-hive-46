@@ -16,17 +16,46 @@ export const createPublicBucket = async (bucketName: string) => {
   try {
     console.log(`Attempting to create public bucket: ${bucketName}`);
     
-    // Call the edge function to create a bucket with public access
+    // First try to create the bucket directly using the client
+    try {
+      const { data: existingBuckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (!listError) {
+        const bucketExists = existingBuckets?.some(b => b.name === bucketName);
+        
+        if (!bucketExists) {
+          console.log(`Bucket ${bucketName} doesn't exist, creating it...`);
+          const { data, error } = await supabase.storage.createBucket(bucketName, {
+            public: true,
+            fileSizeLimit: 5242880,
+            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+          });
+          
+          if (!error) {
+            console.log(`Successfully created bucket ${bucketName} directly`);
+            return { success: true, message: `Bucket ${bucketName} created directly` };
+          }
+        } else {
+          console.log(`Bucket ${bucketName} already exists`);
+          return { success: true, message: `Bucket ${bucketName} already exists` };
+        }
+      }
+    } catch (directError) {
+      console.log('Error creating bucket directly, will try with edge function:', directError);
+    }
+    
+    // If direct creation fails, use the edge function as a fallback
+    console.log(`Falling back to edge function for creating bucket: ${bucketName}`);
     const { data, error } = await supabase.functions.invoke('create-storage-bucket', {
       body: { bucketName }
     });
     
     if (error) {
-      console.error('Error creating public bucket:', error);
+      console.error('Error invoking create-storage-bucket function:', error);
       throw error;
     }
     
-    console.log('Bucket created successfully:', data);
+    console.log('Bucket creation response from edge function:', data);
     return data;
   } catch (error) {
     console.error('Failed to create public bucket:', error);

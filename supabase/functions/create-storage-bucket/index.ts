@@ -52,6 +52,7 @@ serve(async (req) => {
     }
     
     const bucketExists = buckets?.some(b => b.name === bucket)
+    let bucketCreated = false
     
     if (!bucketExists) {
       console.log(`Creating bucket: ${bucket}`);
@@ -69,6 +70,8 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      
+      bucketCreated = true
     } else {
       console.log(`Bucket ${bucket} already exists, updating policies`);
     }
@@ -77,6 +80,23 @@ serve(async (req) => {
     try {
       console.log(`Creating full access policy for ${bucket} bucket`);
       
+      // Set bucket to public if it exists but isn't public
+      if (!bucketCreated) {
+        try {
+          const { error: updateError } = await supabaseAdmin.storage.updateBucket(bucket, {
+            public: true,
+            fileSizeLimit: 5242880,
+            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+          })
+          
+          if (updateError) {
+            console.error("Error updating bucket to be public:", updateError);
+          }
+        } catch (err) {
+          console.error("Error updating bucket:", err);
+        }
+      }
+      
       // First get existing policies
       const { data: policies, error: policiesError } = await supabaseAdmin.storage.from(bucket).getPolicies();
       
@@ -84,8 +104,8 @@ serve(async (req) => {
         console.error("Error getting policies:", policiesError);
       }
       
+      // Clear existing policies if any by creating a new policy with the same name
       if (policies) {
-        // Clear existing policies if any by creating a new policy with the same name
         for (const policy of policies) {
           try {
             console.log(`Removing policy: ${policy.name}`);
@@ -110,7 +130,24 @@ serve(async (req) => {
       
       if (policyError) {
         console.error("Error creating policy:", policyError);
-        // Continue execution even if policy creation fails
+        // Don't throw, continue execution
+      } else {
+        console.log("Successfully created policy: allow-public-access");
+      }
+      
+      // Create SQL to handle bucket creation (as a fallback)
+      try {
+        const { error: sqlError } = await supabaseAdmin.rpc('set_bucket_public', { 
+          bucket_name: bucket 
+        });
+        
+        if (sqlError) {
+          console.error("Error running SQL fallback:", sqlError);
+        } else {
+          console.log("Successfully ran SQL fallback to ensure bucket is public");
+        }
+      } catch (sqlErr) {
+        console.error("Error with SQL fallback:", sqlErr);
       }
     } catch (policyErr) {
       console.error("Error managing policies:", policyErr);
@@ -120,7 +157,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         message: `Bucket ${bucket} configured with open access policy`,
-        bucket: bucket
+        bucket: bucket,
+        created: bucketCreated
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

@@ -90,39 +90,64 @@ const Profile = () => {
     
     try {
       console.log("Initializing storage bucket before upload...");
-      await initStorageBucket();
+      const bucketResult = await initStorageBucket();
+      console.log("Bucket initialization result:", bucketResult);
       
       console.log("Waiting for bucket policies to apply...");
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
       console.log("Attempting to upload file:", fileName);
       
-      const uploadTask = supabase.storage
-        .from('profile-pictures')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
+      let uploadAttempt = 0;
+      let uploadSuccess = false;
+      let uploadData = null;
+      let lastError = null;
       
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
+      while (uploadAttempt < 3 && !uploadSuccess) {
+        uploadAttempt++;
+        try {
+          const progressInterval = setInterval(() => {
+            setUploadProgress(prev => Math.min(prev + 5, 90));
+          }, 200);
+          
+          console.log(`Upload attempt ${uploadAttempt}`);
+          
+          const { error: uploadError, data } = await supabase.storage
+            .from('profile-pictures')
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: true
+            });
+          
+          clearInterval(progressInterval);
+          
+          if (uploadError) {
+            console.error(`Upload error (attempt ${uploadAttempt}):`, uploadError);
+            lastError = uploadError;
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            uploadSuccess = true;
+            uploadData = data;
+            console.log(`Upload succeeded on attempt ${uploadAttempt}:`, data);
+          }
+        } catch (err) {
+          console.error(`Upload exception (attempt ${uploadAttempt}):`, err);
+          lastError = err;
+          
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
       
-      const { error: uploadError, data } = await uploadTask;
-      
-      clearInterval(progressInterval);
-      
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        setUploadError(uploadError.message);
-        throw uploadError;
+      if (!uploadSuccess) {
+        throw lastError || new Error("Failed to upload after multiple attempts");
       }
       
       setUploadProgress(100);
-      console.log("Upload completed successfully:", data);
+      console.log("Upload completed successfully:", uploadData);
       
       const { data: { publicUrl } } = supabase.storage
         .from('profile-pictures')
@@ -137,6 +162,7 @@ const Profile = () => {
       toast.success("Profile picture updated successfully");
     } catch (error: any) {
       console.error("Error uploading profile picture:", error);
+      setUploadError(error.message || "Unknown error occurred");
       toast.error(`Failed to upload profile picture: ${error.message || "Unknown error"}`);
     } finally {
       setUploadingImage(false);
