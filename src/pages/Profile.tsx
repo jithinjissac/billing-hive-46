@@ -1,3 +1,4 @@
+
 import { useState, useEffect, ChangeEvent, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -6,21 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Upload, Info, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 
 const Profile = () => {
-  const { user, profile, updateProfile, isLoading: authLoading, initStorageBucket } = useAuth();
+  const { user, profile, updateProfile, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [bucketReady, setBucketReady] = useState(false);
-  const [removingImage, setRemovingImage] = useState(false);
   
   const [formData, setFormData] = useState({
     first_name: "",
@@ -41,27 +35,6 @@ const Profile = () => {
       });
     }
   }, [profile]);
-
-  useEffect(() => {
-    const prepareBucket = async () => {
-      if (user && !bucketReady) {
-        try {
-          console.log("Pre-initializing storage bucket on profile page load...");
-          const result = await initStorageBucket();
-          console.log("Bucket initialization result:", result);
-          
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          setBucketReady(true);
-          console.log("Bucket is now ready for uploads");
-        } catch (error) {
-          console.error("Error initializing bucket:", error);
-        }
-      }
-    };
-    
-    prepareBucket();
-  }, [user, bucketReady, initStorageBucket]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -91,149 +64,6 @@ const Profile = () => {
     }
   };
 
-  const handleProfilePictureUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    
-    setUploadingImage(true);
-    setUploadProgress(0);
-    setUploadError(null);
-    
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
-      setUploadingImage(false);
-      return;
-    }
-    
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB");
-      setUploadingImage(false);
-      return;
-    }
-    
-    try {
-      if (!bucketReady) {
-        console.log("Initializing storage bucket before upload...");
-        const bucketResult = await initStorageBucket();
-        console.log("Bucket initialization result:", bucketResult);
-        
-        console.log("Waiting for bucket policies to apply...");
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        setBucketReady(true);
-      }
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      
-      console.log("Attempting to upload file:", fileName);
-      
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 5, 90));
-      }, 200);
-      
-      let uploadSuccess = false;
-      let uploadError = null;
-      let publicUrl = '';
-      
-      for (let attempt = 1; attempt <= 3 && !uploadSuccess; attempt++) {
-        try {
-          console.log(`Upload attempt ${attempt}...`);
-          
-          if (attempt > 1) {
-            await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-          }
-          
-          const { error, data } = await supabase.storage
-            .from('profile-pictures')
-            .upload(fileName, file, {
-              cacheControl: '3600',
-              upsert: true
-            });
-          
-          if (error) {
-            console.error(`Upload error (attempt ${attempt}):`, error);
-            uploadError = error;
-          } else {
-            uploadSuccess = true;
-            console.log(`Upload succeeded on attempt ${attempt}:`, data);
-            
-            const { data: urlData } = supabase.storage
-              .from('profile-pictures')
-              .getPublicUrl(fileName);
-              
-            publicUrl = urlData.publicUrl;
-            console.log("File public URL:", publicUrl);
-          }
-        } catch (err) {
-          console.error(`Upload exception (attempt ${attempt}):`, err);
-          uploadError = err;
-        }
-      }
-      
-      clearInterval(progressInterval);
-      
-      if (!uploadSuccess) {
-        throw uploadError || new Error("Failed to upload after multiple attempts");
-      }
-      
-      setUploadProgress(100);
-      
-      await updateProfile({
-        profile_picture_url: publicUrl
-      });
-      
-      toast.success("Profile picture updated successfully");
-    } catch (error: any) {
-      console.error("Error uploading profile picture:", error);
-      setUploadError(error.message || "Unknown error occurred");
-      toast.error(`Failed to upload profile picture: ${error.message || "Unknown error"}`);
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const handleRemoveProfilePicture = async () => {
-    if (!user || !profile?.profile_picture_url) return;
-    
-    setRemovingImage(true);
-    try {
-      const url = new URL(profile.profile_picture_url);
-      const pathParts = url.pathname.split('/');
-      const fileName = pathParts[pathParts.length - 1];
-      
-      console.log("Attempting to remove file:", fileName);
-      
-      if (!bucketReady) {
-        console.log("Initializing storage bucket before deletion...");
-        await initStorageBucket();
-        
-        console.log("Waiting for bucket policies to apply...");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setBucketReady(true);
-      }
-      
-      const { error: deleteError } = await supabase.storage
-        .from('profile-pictures')
-        .remove([fileName]);
-      
-      if (deleteError) {
-        console.error("Error deleting profile picture:", deleteError);
-        throw deleteError;
-      }
-      
-      await updateProfile({
-        profile_picture_url: null
-      });
-      
-      toast.success("Profile picture removed successfully");
-    } catch (error: any) {
-      console.error("Error removing profile picture:", error);
-      toast.error(`Failed to remove profile picture: ${error.message || "Unknown error"}`);
-    } finally {
-      setRemovingImage(false);
-    }
-  };
-
   const initials = useMemo(() => {
     if (formData.first_name && formData.last_name) {
       return `${formData.first_name[0]}${formData.last_name[0]}`.toUpperCase();
@@ -251,7 +81,7 @@ const Profile = () => {
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Profile Picture</CardTitle>
+              <CardTitle>Profile Information</CardTitle>
               <CardDescription>
                 Loading your profile information...
               </CardDescription>
@@ -300,81 +130,19 @@ const Profile = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Profile Picture</CardTitle>
+            <CardTitle>Profile Information</CardTitle>
             <CardDescription>
-              Update your profile picture here. Click on the avatar to change it.
+              Your basic profile information
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-6">
-            <div className="relative mb-6">
+            <div className="mb-6">
               <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
-                <AvatarImage src={profile?.profile_picture_url || ""} alt={formData.first_name} />
                 <AvatarFallback className="text-3xl font-bold bg-primary text-white">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              
-              <div className="absolute -bottom-2 -right-2 flex gap-2">
-                <label 
-                  htmlFor="profile-picture-upload" 
-                  className={`rounded-full p-2 ${uploadingImage ? 'bg-muted' : 'bg-primary'} text-white cursor-pointer`}
-                >
-                  {uploadingImage ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                </label>
-                
-                {profile?.profile_picture_url && (
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="rounded-full h-8 w-8 p-0"
-                    onClick={handleRemoveProfilePicture}
-                    disabled={removingImage || uploadingImage}
-                  >
-                    {removingImage ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-              </div>
-              
-              <input 
-                type="file" 
-                id="profile-picture-upload" 
-                className="hidden" 
-                accept="image/*"
-                onChange={handleProfilePictureUpload}
-                disabled={uploadingImage || removingImage}
-              />
             </div>
-            
-            {uploadingImage && (
-              <div className="w-full mb-4">
-                <Progress value={uploadProgress} className="h-2 mb-1" />
-                <p className="text-xs text-center text-muted-foreground">
-                  Uploading: {uploadProgress}%
-                </p>
-              </div>
-            )}
-            
-            {uploadError && (
-              <div className="mb-4 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded text-sm text-destructive flex items-start">
-                <Info className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                <span>{uploadError}</span>
-              </div>
-            )}
-            
-            {!bucketReady && !uploadingImage && !removingImage && (
-              <div className="mb-4 px-3 py-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-600 flex items-start">
-                <Info className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Preparing storage for uploads...</span>
-              </div>
-            )}
             
             <div className="text-center">
               <h3 className="text-lg font-medium">
