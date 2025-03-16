@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { supabase, createPublicBucket } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -110,9 +111,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return existingProfile;
       } else {
         console.log("Creating new profile for user:", userId);
+        
+        // Get user metadata to populate profile
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        let firstName = null;
+        let lastName = null;
+        
+        if (!userError && userData?.user?.user_metadata) {
+          firstName = userData.user.user_metadata.first_name || null;
+          lastName = userData.user.user_metadata.last_name || null;
+        }
+        
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert([{ id: userId }])
+          .insert([{ 
+            id: userId,
+            first_name: firstName,
+            last_name: lastName,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
           .select()
           .single();
 
@@ -323,3 +342,5 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+export default AuthProvider;

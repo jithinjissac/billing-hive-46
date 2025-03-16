@@ -44,6 +44,7 @@ const SignUp = () => {
       setIsLoading(true);
       console.log("Starting sign up process...");
       
+      // Sign up the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -69,7 +70,7 @@ const SignUp = () => {
       if (data?.user) {
         console.log("User created successfully:", data.user.id);
         
-        // Explicitly create/update the profile record to ensure first/last name are set
+        // Explicitly create/update the profile record with first and last name
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -78,10 +79,11 @@ const SignUp = () => {
             last_name: lastName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          }, { onConflict: 'id' });
+          });
           
         if (profileError) {
           console.error("Error creating profile:", profileError);
+          toast.error("Account created but profile setup failed. Please update your profile later.");
         } else {
           console.log("Profile created successfully");
         }
