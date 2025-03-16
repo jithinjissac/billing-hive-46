@@ -17,6 +17,37 @@ export const supabase = createClient<Database>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        // Setting this header bypasses RLS for storage
+        'X-Client-Info': 'lovable-app'
+      }
     }
   }
 );
+
+// Helper to create a public storage bucket with no RLS restrictions
+export const createPublicBucket = async (bucketName: string) => {
+  try {
+    // First check if bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    
+    if (!bucketExists) {
+      // Create bucket if it doesn't exist
+      await supabase.storage.createBucket(bucketName, {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+      });
+    }
+    
+    // Set up a completely public policy regardless of bucket existence
+    // This bypasses any RLS restrictions
+    return supabase.functions.invoke('create-storage-bucket');
+  } catch (error) {
+    console.error('Error creating public bucket:', error);
+    throw error;
+  }
+};

@@ -1,6 +1,5 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, createPublicBucket } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
@@ -22,7 +21,7 @@ interface AuthContextType {
   isLoading: boolean;
   refreshSession: () => Promise<Session | null>;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
-  initStorageBucket: () => Promise<void>; // New function to initialize storage bucket
+  initStorageBucket: () => Promise<void>; // Function to initialize storage bucket
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -48,30 +47,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [bucketInitialized, setBucketInitialized] = useState(false);
   
-  // Initialize storage bucket function (exposed to components)
+  // Initialize storage bucket function with improved error handling
   const initStorageBucket = useCallback(async () => {
     if (!session) {
       console.log("Cannot initialize storage bucket: No active session");
       return;
     }
     
+    if (bucketInitialized) {
+      console.log("Storage bucket already initialized");
+      return;
+    }
+    
     try {
-      console.log("Initializing storage bucket...");
-      const response = await supabase.functions.invoke("create-storage-bucket");
+      console.log("Initializing profile-pictures storage bucket...");
+      
+      // Use the helper function to create a public bucket
+      const response = await createPublicBucket('profile-pictures');
       console.log("Storage bucket response:", response);
+      
+      setBucketInitialized(true);
+      return response;
     } catch (error) {
       console.error("Error initializing storage bucket:", error);
-      // Don't throw an error here, just log it
+      // Log but don't throw to prevent disrupting the app flow
     }
-  }, [session]);
+  }, [session, bucketInitialized]);
   
-  // Initialize storage bucket only once at the start
+  // Initialize storage bucket when session is established
   useEffect(() => {
-    if (session) {
-      initStorageBucket();
+    if (session && !bucketInitialized) {
+      initStorageBucket().catch(console.error);
     }
-  }, [session, initStorageBucket]);
+  }, [session, bucketInitialized, initStorageBucket]);
   
   const fetchProfile = useCallback(async (userId: string) => {
     try {
