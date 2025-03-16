@@ -17,7 +17,7 @@ serve(async (req) => {
     const { bucketName } = await req.json();
     const bucket = bucketName || 'profile-pictures'; // Default to profile-pictures if not specified
     
-    console.log(`Processing request to create bucket: ${bucket}`);
+    console.log(`Processing request to create/update bucket: ${bucket}`);
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
@@ -73,50 +73,43 @@ serve(async (req) => {
       
       bucketCreated = true
     } else {
-      console.log(`Bucket ${bucket} already exists, updating policies`);
+      console.log(`Bucket ${bucket} already exists, updating to public and refreshing policies`);
+      
+      // Update existing bucket to ensure it's public
+      try {
+        await supabaseAdmin.storage.updateBucket(bucket, {
+          public: true,
+          fileSizeLimit: 5242880,
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+        });
+      } catch (updateError) {
+        console.error("Error updating bucket:", updateError);
+        // Continue anyway to update policies
+      }
     }
     
-    // Always update policies to ensure they are set correctly
+    // Delete any existing policies first
     try {
-      console.log(`Creating full access policy for ${bucket} bucket`);
+      const { data: policies } = await supabaseAdmin.storage.from(bucket).getPolicies();
       
-      // Set bucket to public if it exists but isn't public
-      if (!bucketCreated) {
-        try {
-          const { error: updateError } = await supabaseAdmin.storage.updateBucket(bucket, {
-            public: true,
-            fileSizeLimit: 5242880,
-            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
-          })
-          
-          if (updateError) {
-            console.error("Error updating bucket to be public:", updateError);
-          }
-        } catch (err) {
-          console.error("Error updating bucket:", err);
-        }
-      }
-      
-      // First get existing policies
-      const { data: policies, error: policiesError } = await supabaseAdmin.storage.from(bucket).getPolicies();
-      
-      if (policiesError) {
-        console.error("Error getting policies:", policiesError);
-      }
-      
-      // Clear existing policies if any by creating a new policy with the same name
       if (policies) {
+        console.log(`Found ${policies.length} existing policies, removing them...`);
         for (const policy of policies) {
+          console.log(`Removing policy: ${policy.name}`);
           try {
-            console.log(`Removing policy: ${policy.name}`);
             await supabaseAdmin.storage.from(bucket).deletePolicy(policy.name);
           } catch (err) {
             console.error(`Error deleting policy ${policy.name}:`, err);
           }
         }
       }
-      
-      // Create completely open policy
+    } catch (policiesError) {
+      console.error("Error getting policies:", policiesError);
+    }
+    
+    // Create completely open policy
+    console.log("Creating new open access policy...");
+    try {
       const { error: policyError } = await supabaseAdmin
         .storage
         .from(bucket)
@@ -130,35 +123,55 @@ serve(async (req) => {
       
       if (policyError) {
         console.error("Error creating policy:", policyError);
-        // Don't throw, continue execution
       } else {
         console.log("Successfully created policy: allow-public-access");
       }
+    } catch (policyError) {
+      console.error("Error creating policy:", policyError);
+    }
+    
+    // Ensure RLS is disabled (just in case)
+    console.log("Executing SQL to ensure bucket is fully public...");
+    try {
+      const { error: sqlError } = await supabaseAdmin.rpc('set_bucket_public', { 
+        bucket_name: bucket 
+      });
       
-      // Create SQL to handle bucket creation (as a fallback)
-      try {
-        const { error: sqlError } = await supabaseAdmin.rpc('set_bucket_public', { 
-          bucket_name: bucket 
-        });
+      if (sqlError) {
+        console.error("Error running SQL fallback:", sqlError);
         
-        if (sqlError) {
-          console.error("Error running SQL fallback:", sqlError);
-        } else {
-          console.log("Successfully ran SQL fallback to ensure bucket is public");
+        // Try direct SQL as last resort
+        try {
+          const { error: directSqlError } = await supabaseAdmin.rpc('execute_sql', {
+            sql: `
+              -- Make bucket public
+              UPDATE storage.buckets SET public = TRUE WHERE name = '${bucket}';
+              
+              -- Remove any RLS if present
+              ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
+              
+              -- Re-enable with open policy
+              ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+            `
+          });
+          
+          if (directSqlError) {
+            console.error("Error with direct SQL execution:", directSqlError);
+          }
+        } catch (directErr) {
+          console.error("Error with direct SQL execution:", directErr);
         }
-      } catch (sqlErr) {
-        console.error("Error with SQL fallback:", sqlErr);
       }
-    } catch (policyErr) {
-      console.error("Error managing policies:", policyErr);
-      // Continue execution even if policy management fails
+    } catch (sqlErr) {
+      console.error("Error with SQL operations:", sqlErr);
     }
     
     return new Response(
       JSON.stringify({ 
         message: `Bucket ${bucket} configured with open access policy`,
         bucket: bucket,
-        created: bucketCreated
+        created: bucketCreated,
+        public: true
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

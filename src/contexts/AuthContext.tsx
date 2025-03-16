@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { supabase, createPublicBucket } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -21,7 +22,7 @@ interface AuthContextType {
   isLoading: boolean;
   refreshSession: () => Promise<Session | null>;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
-  initStorageBucket: () => Promise<void>; // Function to initialize storage bucket
+  initStorageBucket: () => Promise<any>; // Function to initialize storage bucket
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -50,16 +51,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [bucketInitialized, setBucketInitialized] = useState(false);
   
   const initStorageBucket = useCallback(async () => {
-    if (!session) {
-      console.log("Cannot initialize storage bucket: No active session");
-      return;
-    }
-    
-    if (bucketInitialized) {
-      console.log("Storage bucket already initialized");
-      return;
-    }
-    
     try {
       console.log("Initializing profile-pictures storage bucket...");
       
@@ -70,13 +61,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return response;
     } catch (error) {
       console.error("Error initializing storage bucket:", error);
+      throw error;
     }
-  }, [session, bucketInitialized]);
+  }, []);
   
+  // Initialize storage bucket when authenticated
   useEffect(() => {
-    if (session && !bucketInitialized) {
-      initStorageBucket().catch(console.error);
-    }
+    const initBucket = async () => {
+      if (session && !bucketInitialized) {
+        try {
+          await initStorageBucket();
+        } catch (error) {
+          console.error("Failed to initialize bucket on auth:", error);
+          // Don't block UI for this error
+        }
+      }
+    };
+    
+    initBucket();
   }, [session, bucketInitialized, initStorageBucket]);
   
   const fetchProfile = useCallback(async (userId: string) => {

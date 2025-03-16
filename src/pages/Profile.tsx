@@ -19,6 +19,7 @@ const Profile = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [bucketReady, setBucketReady] = useState(false);
   
   const [formData, setFormData] = useState({
     first_name: "",
@@ -39,6 +40,30 @@ const Profile = () => {
       });
     }
   }, [profile]);
+
+  // Initialize bucket when component mounts
+  useEffect(() => {
+    const prepareBucket = async () => {
+      if (user && !bucketReady) {
+        try {
+          console.log("Pre-initializing storage bucket on profile page load...");
+          const result = await initStorageBucket();
+          console.log("Bucket initialization result:", result);
+          
+          // Add a delay to ensure policies have propagated
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          setBucketReady(true);
+          console.log("Bucket is now ready for uploads");
+        } catch (error) {
+          console.error("Error initializing bucket:", error);
+          // Don't block UI for this error
+        }
+      }
+    };
+    
+    prepareBucket();
+  }, [user, bucketReady, initStorageBucket]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -89,72 +114,78 @@ const Profile = () => {
     }
     
     try {
-      console.log("Initializing storage bucket before upload...");
-      const bucketResult = await initStorageBucket();
-      console.log("Bucket initialization result:", bucketResult);
-      
-      console.log("Waiting for bucket policies to apply...");
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // If bucket isn't ready yet, initialize it now
+      if (!bucketReady) {
+        console.log("Initializing storage bucket before upload...");
+        const bucketResult = await initStorageBucket();
+        console.log("Bucket initialization result:", bucketResult);
+        
+        console.log("Waiting for bucket policies to apply...");
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        setBucketReady(true);
+      }
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
       console.log("Attempting to upload file:", fileName);
       
-      let uploadAttempt = 0;
-      let uploadSuccess = false;
-      let uploadData = null;
-      let lastError = null;
+      // Start upload progress simulation
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 5, 90));
+      }, 200);
       
-      while (uploadAttempt < 3 && !uploadSuccess) {
-        uploadAttempt++;
+      // Try multiple upload attempts if needed
+      let uploadSuccess = false;
+      let uploadError = null;
+      let publicUrl = '';
+      
+      // Try up to 3 times with increasing delays
+      for (let attempt = 1; attempt <= 3 && !uploadSuccess; attempt++) {
         try {
-          const progressInterval = setInterval(() => {
-            setUploadProgress(prev => Math.min(prev + 5, 90));
-          }, 200);
+          console.log(`Upload attempt ${attempt}...`);
           
-          console.log(`Upload attempt ${uploadAttempt}`);
+          if (attempt > 1) {
+            // Add increasing delay between attempts
+            await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+          }
           
-          const { error: uploadError, data } = await supabase.storage
+          const { error, data } = await supabase.storage
             .from('profile-pictures')
             .upload(fileName, file, {
               cacheControl: '3600',
               upsert: true
             });
           
-          clearInterval(progressInterval);
-          
-          if (uploadError) {
-            console.error(`Upload error (attempt ${uploadAttempt}):`, uploadError);
-            lastError = uploadError;
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
+          if (error) {
+            console.error(`Upload error (attempt ${attempt}):`, error);
+            uploadError = error;
           } else {
             uploadSuccess = true;
-            uploadData = data;
-            console.log(`Upload succeeded on attempt ${uploadAttempt}:`, data);
+            console.log(`Upload succeeded on attempt ${attempt}:`, data);
+            
+            const { data: urlData } = supabase.storage
+              .from('profile-pictures')
+              .getPublicUrl(fileName);
+              
+            publicUrl = urlData.publicUrl;
+            console.log("File public URL:", publicUrl);
           }
         } catch (err) {
-          console.error(`Upload exception (attempt ${uploadAttempt}):`, err);
-          lastError = err;
-          
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.error(`Upload exception (attempt ${attempt}):`, err);
+          uploadError = err;
         }
       }
       
+      clearInterval(progressInterval);
+      
       if (!uploadSuccess) {
-        throw lastError || new Error("Failed to upload after multiple attempts");
+        throw uploadError || new Error("Failed to upload after multiple attempts");
       }
       
       setUploadProgress(100);
-      console.log("Upload completed successfully:", uploadData);
       
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-pictures')
-        .getPublicUrl(fileName);
-      
-      console.log("File public URL:", publicUrl);
-      
+      // Update profile with new image URL
       await updateProfile({
         profile_picture_url: publicUrl
       });
@@ -282,6 +313,13 @@ const Profile = () => {
               <div className="mb-4 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded text-sm text-destructive flex items-start">
                 <Info className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
                 <span>{uploadError}</span>
+              </div>
+            )}
+            
+            {!bucketReady && !uploadingImage && (
+              <div className="mb-4 px-3 py-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-600 flex items-start">
+                <Info className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                <span>Preparing storage for uploads...</span>
               </div>
             )}
             

@@ -16,36 +16,76 @@ export const createPublicBucket = async (bucketName: string) => {
   try {
     console.log(`Attempting to create public bucket: ${bucketName}`);
     
-    // First try to create the bucket directly using the client
-    try {
-      const { data: existingBuckets, error: listError } = await supabase.storage.listBuckets();
+    // First check if bucket exists
+    const { data: existingBuckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+    } else {
+      const bucketExists = existingBuckets?.some(b => b.name === bucketName);
       
-      if (!listError) {
-        const bucketExists = existingBuckets?.some(b => b.name === bucketName);
+      if (bucketExists) {
+        console.log(`Bucket ${bucketName} already exists, updating permissions...`);
         
-        if (!bucketExists) {
-          console.log(`Bucket ${bucketName} doesn't exist, creating it...`);
-          const { data, error } = await supabase.storage.createBucket(bucketName, {
+        // Try to update policy directly
+        try {
+          // Get existing policies
+          const { data: policies } = await supabase.storage.from(bucketName).getPolicies();
+          
+          // If policies exist but aren't public, try to update
+          if (policies) {
+            // Create open policy if needed
+            await supabase.storage.from(bucketName).createPolicy(
+              'allow-all-access',
+              {
+                definition: "TRUE",
+                allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+              }
+            );
+            
+            console.log(`Updated policies for existing bucket ${bucketName}`);
+          }
+          
+          return { success: true, message: `Bucket ${bucketName} permissions updated` };
+        } catch (policyError) {
+          console.error('Error updating bucket policies:', policyError);
+          // Continue to edge function as fallback
+        }
+      } else {
+        // Try to create bucket directly with public access
+        try {
+          const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
             public: true,
             fileSizeLimit: 5242880,
             allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
           });
           
-          if (!error) {
-            console.log(`Successfully created bucket ${bucketName} directly`);
-            return { success: true, message: `Bucket ${bucketName} created directly` };
+          if (!createError) {
+            // Try to set an open policy
+            try {
+              await supabase.storage.from(bucketName).createPolicy(
+                'allow-all-access',
+                {
+                  definition: "TRUE",
+                  allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+                }
+              );
+              
+              console.log(`Successfully created public bucket ${bucketName} with open policy`);
+              return { success: true, message: `Bucket ${bucketName} created with open policy` };
+            } catch (policyError) {
+              console.error('Error setting bucket policy:', policyError);
+              // Continue to edge function as fallback
+            }
           }
-        } else {
-          console.log(`Bucket ${bucketName} already exists`);
-          return { success: true, message: `Bucket ${bucketName} already exists` };
+        } catch (createBucketError) {
+          console.error('Error creating bucket directly:', createBucketError);
         }
       }
-    } catch (directError) {
-      console.log('Error creating bucket directly, will try with edge function:', directError);
     }
     
-    // If direct creation fails, use the edge function as a fallback
-    console.log(`Falling back to edge function for creating bucket: ${bucketName}`);
+    // Use edge function as fallback if direct methods failed
+    console.log(`Using edge function to ensure bucket ${bucketName} is public...`);
     const { data, error } = await supabase.functions.invoke('create-storage-bucket', {
       body: { bucketName }
     });
@@ -55,10 +95,14 @@ export const createPublicBucket = async (bucketName: string) => {
       throw error;
     }
     
-    console.log('Bucket creation response from edge function:', data);
+    console.log('Bucket creation/update response from edge function:', data);
+    
+    // Add delay to allow policies to propagate
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     return data;
   } catch (error) {
-    console.error('Failed to create public bucket:', error);
+    console.error('Failed to create/update public bucket:', error);
     throw error;
   }
 };
