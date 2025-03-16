@@ -34,51 +34,91 @@ serve(async (req) => {
       }
     )
 
-    const { data: buckets } = await supabaseAdmin.storage.listBuckets()
+    const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets()
+    
+    if (bucketsError) {
+      console.error("Error listing buckets:", bucketsError);
+      return new Response(
+        JSON.stringify({ error: bucketsError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
     const bucketExists = buckets?.some(bucket => bucket.name === 'profile-pictures')
     
     if (!bucketExists) {
+      console.log("Creating profile-pictures bucket");
       const { data, error } = await supabaseAdmin.storage.createBucket('profile-pictures', {
         public: true,
         fileSizeLimit: 2097152, // 2MB
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
       })
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating bucket:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       
       // Create policy to allow authenticated users to upload their own files
       try {
-        const { error: policyError } = await supabaseAdmin
-          .storage.from('profile-pictures')
-          .createPolicy('Allow authenticated uploads', {
-            name: 'Allow authenticated uploads',
-            definition: `
-              (bucket_id = 'profile-pictures'::text) AND
-              (auth.role() = 'authenticated'::text)
-            `
+        console.log("Creating policies for profile-pictures bucket");
+        
+        // Policy for authenticated uploads
+        const { error: policyError1 } = await supabaseAdmin
+          .storage
+          .from('profile-pictures')
+          .createPolicy('authenticated-uploads', {
+            name: 'authenticated-uploads',
+            definition: "(bucket_id = 'profile-pictures'::text) AND (auth.role() = 'authenticated'::text)"
           });
         
-        if (policyError) console.error("Policy creation error:", policyError);
+        if (policyError1) {
+          console.error("Error creating authenticated uploads policy:", policyError1);
+        }
+        
+        // Policy for public downloads
+        const { error: policyError2 } = await supabaseAdmin
+          .storage
+          .from('profile-pictures')
+          .createPolicy('public-downloads', {
+            name: 'public-downloads',
+            definition: "(bucket_id = 'profile-pictures'::text)",
+            allowedOperations: ['SELECT']
+          });
+        
+        if (policyError2) {
+          console.error("Error creating public downloads policy:", policyError2);
+        }
+        
       } catch (policyErr) {
-        console.error("Error creating policy:", policyErr);
+        console.error("Error creating policies:", policyErr);
         // Continue execution even if policy creation fails
       }
       
       return new Response(
-        JSON.stringify({ message: "Profile pictures bucket created successfully" }),
+        JSON.stringify({ 
+          message: "Profile pictures bucket created successfully",
+          bucket: 'profile-pictures'
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
     return new Response(
-      JSON.stringify({ message: "Profile pictures bucket already exists" }),
+      JSON.stringify({ 
+        message: "Profile pictures bucket already exists",
+        bucket: 'profile-pictures'
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
     
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Unhandled error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Unknown error occurred" }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

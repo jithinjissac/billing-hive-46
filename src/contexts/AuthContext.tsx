@@ -46,14 +46,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [storageInitialized, setStorageInitialized] = useState(false);
   
   // Initialize storage bucket on load - do only once
   useEffect(() => {
     const initStorageBucket = async () => {
+      if (storageInitialized) return;
+      
       try {
+        console.log("Initializing storage bucket...");
         const { error } = await supabase.functions.invoke("create-storage-bucket");
         if (error) {
           console.error("Error invoking create-storage-bucket function:", error);
+        } else {
+          console.log("Storage bucket initialized successfully");
+          setStorageInitialized(true);
         }
       } catch (error) {
         console.error("Error initializing storage bucket:", error);
@@ -61,7 +68,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
     
     initStorageBucket();
-  }, []);
+  }, [storageInitialized]);
   
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -85,6 +92,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return existingProfile;
       } else {
         // If profile doesn't exist, create it
+        console.log("Creating new profile for user:", userId);
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert([{ id: userId }])
@@ -176,6 +184,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       try {
         console.log("Initializing auth...");
+        setIsLoading(true);
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (initialSession) {

@@ -18,23 +18,8 @@ import UpdatePassword from "./pages/auth/UpdatePassword";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { Toaster } from "sonner";
-import { useEffect } from "react";
-import { supabase } from "./integrations/supabase/client";
 
 function App() {
-  // Initialize storage bucket on app load
-  useEffect(() => {
-    const initApp = async () => {
-      try {
-        await supabase.functions.invoke('create-storage-bucket', {});
-      } catch (error) {
-        console.error("Error initializing storage:", error);
-      }
-    };
-    
-    initApp();
-  }, []);
-  
   return (
     <AuthProvider>
       <Router>

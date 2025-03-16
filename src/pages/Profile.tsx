@@ -92,11 +92,19 @@ const Profile = () => {
       
       // Ensure profile-pictures bucket exists by calling the edge function
       try {
-        await supabase.functions.invoke("create-storage-bucket");
+        const { error: bucketError } = await supabase.functions.invoke("create-storage-bucket");
+        if (bucketError) {
+          console.error("Error creating bucket via edge function:", bucketError);
+          throw bucketError;
+        }
       } catch (error) {
         console.error("Error creating bucket via edge function:", error);
+        toast.error("Error preparing for upload");
+        setUploadingImage(false);
+        return;
       }
       
+      // Upload the file
       const { error: uploadError, data } = await supabase.storage
         .from('profile-pictures')
         .upload(fileName, file, {
@@ -104,7 +112,10 @@ const Profile = () => {
           upsert: true
         });
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw uploadError;
+      }
       
       // Get the public URL
       const { data: { publicUrl } } = supabase.storage
