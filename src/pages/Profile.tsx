@@ -1,4 +1,3 @@
-
 import { useState, useEffect, ChangeEvent, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -98,17 +97,12 @@ const Profile = () => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
-      // Upload the file directly without calling the edge function
-      // The bucket should already exist and have the right permissions
+      // Upload the file - without using onUploadProgress since it's not supported
       const { error: uploadError, data } = await supabase.storage
         .from('profile-pictures')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: true,
-          onUploadProgress: (progress) => {
-            const percent = Math.round((progress.loaded / progress.total) * 100);
-            setUploadProgress(percent);
-          }
+          upsert: true
         });
       
       if (uploadError) {
@@ -116,6 +110,9 @@ const Profile = () => {
         setUploadError(uploadError.message);
         throw uploadError;
       }
+      
+      // Set progress to 100% after successful upload
+      setUploadProgress(100);
       
       // Get the public URL
       const { data: { publicUrl } } = supabase.storage
