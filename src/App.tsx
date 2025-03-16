@@ -14,20 +14,7 @@ import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
-import React, { useEffect } from "react";
 
-const App: React.FC = () => {
-  useEffect(() => {
-    // Select and remove the unwanted element by ID
-    const elements = document.querySelectorAll("#lovable-badge, script[src*='lovable']");
-    
-    elements.forEach((el) => el.remove());
-  }, []); // Runs once when the component mounts
-
-  return
-};
-
-export default App;
 
 const queryClient = new QueryClient();
 
@@ -59,5 +46,11 @@ const App = () => {
     </QueryClientProvider>
   );
 };
+useEffect(() => {
+  // Select and remove the unwanted element by ID
+  const elements = document.querySelectorAll("#lovable-badge, script[src*='lovable']");
+  
+  elements.forEach((el) => el.remove());
+}, []); // Runs once when the component mounts
 
 export default App;
