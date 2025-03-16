@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -122,12 +121,15 @@ const InvoiceView = () => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
             id: item.id,
+            name: item.name || "",
             description: item.description,
             quantity: item.quantity,
             price: Number(item.price),
             specs
           };
         });
+        
+        console.log("Mapped items with names:", items);
         
         let status = invoiceData.status as "draft" | "pending" | "paid" | "overdue";
         
