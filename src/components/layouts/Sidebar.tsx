@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -20,9 +19,10 @@ import { toast } from "sonner";
 interface SidebarProps {
   showCloseButton?: boolean;
   onClose?: () => void;
+  userProfile?: any;
 }
 
-export function Sidebar({ showCloseButton = false, onClose }: SidebarProps) {
+export function Sidebar({ showCloseButton = false, onClose, userProfile }: SidebarProps) {
   const { pathname } = useLocation();
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
