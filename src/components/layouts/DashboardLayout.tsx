@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardLayoutProps {
@@ -14,12 +15,14 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isMobile = useIsMobile();
   const [logoUrl, setLogoUrl] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     fetchCompanyLogo();
   }, []);
   
   const fetchCompanyLogo = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('company_settings')
@@ -38,7 +41,27 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       }
     } catch (error) {
       console.error("Error fetching company logo:", error);
+    } finally {
+      setLoading(false);
     }
+  };
+  
+  const renderLogo = () => {
+    if (loading) {
+      return <Skeleton className="h-10 w-14" />;
+    }
+    
+    if (logoUrl) {
+      return (
+        <img 
+          src={logoUrl} 
+          alt="TechiusPay Logo" 
+          className="h-10 w-auto" 
+        />
+      );
+    }
+    
+    return null;
   };
   
   if (isMobile) {
@@ -46,11 +69,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <div className="min-h-screen bg-gray-50">
         <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
           <div className="flex items-center">
-            <img 
-              src={logoUrl || "/placeholder.svg"} 
-              alt="TechiusPay Logo" 
-              className="h-10 w-auto" 
-            />
+            {renderLogo()}
             <span className="ml-2 font-bold text-xl">TechiusPay</span>
           </div>
           <Sheet>
