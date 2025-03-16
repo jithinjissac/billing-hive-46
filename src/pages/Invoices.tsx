@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,27 +11,33 @@ import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { Invoice } from "@/types/invoice";
 import { formatDate, formatCurrency } from "@/utils/formatters";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Invoices = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // Fetch invoices once on component mount
-    fetchInvoices();
-  }, []);
+    if (user) {
+      fetchInvoices();
+    }
+  }, [user]);
   
   useEffect(() => {
-    // Apply filters whenever searchQuery or statusFilter changes
     applyFilters();
   }, [searchQuery, statusFilter, invoices]);
   
   const fetchInvoices = async () => {
     try {
+      console.log("Fetching invoices...");
+      setIsLoading(true);
+      
       const { data: invoicesData, error: invoicesError } = await supabase
         .from('invoices')
         .select(`
@@ -46,6 +51,8 @@ const Invoices = () => {
         toast.error("Failed to load invoices");
         return;
       }
+      
+      console.log("Invoices data:", invoicesData);
       
       // Format the data to match our app's structure
       const formattedInvoices = invoicesData.map(inv => ({
@@ -74,6 +81,8 @@ const Invoices = () => {
     } catch (error) {
       console.error("Error fetching invoices:", error);
       toast.error("Failed to load invoices");
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -134,6 +143,17 @@ const Invoices = () => {
     }
   };
   
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-[60vh]">
+          <h2 className="text-2xl font-semibold mb-4">Please Sign In</h2>
+          <p className="text-muted-foreground">You need to be signed in to view invoices.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
