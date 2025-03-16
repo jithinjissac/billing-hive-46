@@ -123,7 +123,7 @@ const InvoiceEdit = () => {
         };
         
         setInvoice(fullInvoice);
-        console.log("Loaded invoice:", fullInvoice);
+        console.log("Loaded invoice with notes:", fullInvoice);
       } catch (error) {
         console.error("Error fetching invoice:", error);
         toast.error("Failed to load invoice");

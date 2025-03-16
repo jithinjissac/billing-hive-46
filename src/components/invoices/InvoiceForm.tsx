@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -161,7 +160,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
           console.log("Existing invoice notes:", invoiceData.notes);
           const invoiceNoteLines = typeof invoiceData.notes === 'string' 
             ? invoiceData.notes.split('\n').filter(note => note.trim() !== '')
-            : [];
+            : Array.isArray(invoiceData.notes) ? invoiceData.notes : [];
           
           console.log("Parsed note lines:", invoiceNoteLines);
           setSelectedNotes(invoiceNoteLines);

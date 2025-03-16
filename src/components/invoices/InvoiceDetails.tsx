@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -92,6 +91,9 @@ export function InvoiceDetails({
     : (typeof invoice.notes === 'string' 
         ? invoice.notes.split('\n').filter(note => note.trim() !== '') 
         : []);
+
+  // Calculate discount amount
+  const discountAmount = invoice.discount > 0 ? (invoice.subtotal * (invoice.discount / 100)) : 0;
 
   console.log("Company settings in InvoiceDetails:", companySettings);
   console.log("Logo URL:", logoUrl);
@@ -197,7 +199,7 @@ export function InvoiceDetails({
             <TableRow>
               <TableCell>DISCOUNT</TableCell>
               <TableCell></TableCell>
-              <TableCell className="text-right">-{formatCurrency(invoice.discount, invoice.currency as any)}</TableCell>
+              <TableCell className="text-right">-{formatCurrency(discountAmount, invoice.currency as any)}</TableCell>
             </TableRow>
           )}
         </TableBody>
