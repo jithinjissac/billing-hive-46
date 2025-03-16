@@ -23,6 +23,13 @@ const App = () => {
   useEffect(() => {
     document.title = "TechiusPay - Invoice Management System";
   }, []);
+  useEffect(() => {
+    // Remove the unwanted script
+    document.querySelectorAll("script[src='https://cdn.gpteng.co/gptengineer.js']").forEach(el => el.remove());
+
+    // Remove the unwanted element
+    document.querySelectorAll("#lovable-badge, script[src*='lovable']").forEach(el => el.remove());
+  }, []); // Runs once when the component mounts
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -46,11 +53,4 @@ const App = () => {
     </QueryClientProvider>
   );
 };
-useEffect(() => {
-  // Select and remove the unwanted element by ID
-  const elements = document.querySelectorAll("#lovable-badge, script[src*='lovable']");
-  
-  elements.forEach((el) => el.remove());
-}, []); // Runs once when the component mounts
-
 export default App;
