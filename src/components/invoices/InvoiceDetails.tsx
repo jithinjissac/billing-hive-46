@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -43,8 +42,9 @@ export function InvoiceDetails({
   const [invoiceSettings, setInvoiceSettings] = useState(getInvoiceSettings());
   const [companyData, setCompanyData] = useState<any>(null);
   
+  const displayCreatorName = invoice.creatorName || creatorName || "RICHU EAPEN GEORGE";
+  
   useEffect(() => {
-    // Fetch company settings from database
     const fetchCompanySettings = async () => {
       const { data, error } = await supabase
         .from('company_settings')
@@ -98,17 +98,14 @@ export function InvoiceDetails({
   const currencySymbol = getCurrencySymbol(invoice.currency as string || "INR");
   const amountInWords = convertNumberToWords(invoice.total, invoice.currency as any || "INR");
   
-  // Parse notes from the invoice
   const invoiceNotes = Array.isArray(invoice.notes) 
     ? invoice.notes 
     : (typeof invoice.notes === 'string' 
         ? invoice.notes.split('\n').filter(note => note.trim() !== '') 
         : []);
 
-  // Calculate discount amount
   const discountAmount = invoice.discount > 0 ? (invoice.subtotal * (invoice.discount / 100)) : 0;
   
-  // Get logo and stamp URLs from database if available
   const logoUrl = companyData?.logo_url || companySettings.logo || "";
   const stampUrl = companyData?.stamp_url || companySettings.stamp || "";
 
@@ -249,7 +246,7 @@ export function InvoiceDetails({
         <div className="text-right">
           <div className="text-xs sm:text-sm mb-2">
             For {companySettings.name},<br />
-            <span className="font-bold">{creatorName || "RICHU EAPEN GEORGE"}</span>
+            <span className="font-bold">{displayCreatorName}</span>
           </div>
           {stampUrl ? (
             <img 
@@ -293,3 +290,4 @@ export function InvoiceDetails({
     </div>
   );
 }
+

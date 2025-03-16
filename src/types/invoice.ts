@@ -1,4 +1,3 @@
-
 export type CurrencyCode = "INR" | "USD" | "GBP" | "AUD";
 
 export interface CurrencyInfo {
@@ -38,14 +37,17 @@ export interface Invoice {
   customer: Customer;
   date: string;
   dueDate: string;
-  status: "draft" | "pending" | "paid" | "overdue";
+  status: 'draft' | 'pending' | 'paid' | 'overdue';
   items: InvoiceItem[];
-  currency?: CurrencyCode;
   subtotal: number;
   tax: number;
   total: number;
-  notes?: string;
+  notes?: string | string[];
+  currency?: CurrencyCode;
   discount?: number;
   isTaxEnabled?: boolean;
   paymentDetails?: PaymentDetails;
+  // Add creator information
+  creatorId?: string;
+  creatorName?: string;
 }

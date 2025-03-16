@@ -8,16 +8,28 @@ import { InvoiceForm } from "@/components/invoices/InvoiceForm";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Invoice, CurrencyCode } from "@/types/invoice";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const InvoiceCreate = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, profile } = useAuth();
   
   const handleSubmit = async (invoice: Invoice) => {
     setIsSubmitting(true);
     
     try {
       console.log("Creating invoice:", invoice);
+      
+      // Get creator information
+      let creatorName = "";
+      if (user?.user_metadata?.name) {
+        creatorName = user.user_metadata.name;
+      } else if (profile?.first_name || profile?.last_name) {
+        creatorName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+      } else if (user?.email) {
+        creatorName = user.email;
+      }
       
       // Ensure currency is one of the valid enum values
       const currency = (invoice.currency as CurrencyCode) || "INR";
@@ -39,7 +51,9 @@ const InvoiceCreate = () => {
           total: invoice.total,
           notes: invoice.notes,
           currency: currency,
-          discount: invoice.discount || 0
+          discount: invoice.discount || 0,
+          creator_id: user?.id,
+          creator_name: creatorName
         })
         .select()
         .single();

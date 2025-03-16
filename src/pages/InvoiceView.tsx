@@ -30,41 +30,6 @@ const InvoiceView = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [creatorName, setCreatorName] = useState("");
-  const [user, setUser] = useState<any>(null);
-  
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        setUser(data.user);
-        if (data.user.user_metadata?.name) {
-          setCreatorName(data.user.user_metadata.name);
-        } else if (data.user.email) {
-          setCreatorName(data.user.email);
-        }
-      }
-    };
-    
-    fetchUser();
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        if (session.user.user_metadata?.name) {
-          setCreatorName(session.user.user_metadata.name);
-        } else if (session.user.email) {
-          setCreatorName(session.user.email);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setCreatorName("");
-      }
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
   
   useEffect(() => {
     const handleSettingsUpdate = () => {
@@ -84,7 +49,7 @@ const InvoiceView = () => {
   const generatePdfPreview = async (invoiceData: Invoice) => {
     try {
       setIsPdfLoading(true);
-      const preview = await generatePDF(invoiceData, false, creatorName || undefined);
+      const preview = await generatePDF(invoiceData, false, invoiceData.creatorName || undefined);
       setPdfPreview(preview);
     } catch (error) {
       console.error("Error generating PDF preview:", error);
@@ -171,6 +136,9 @@ const InvoiceView = () => {
         
         console.log("Notes from DB:", invoiceData.notes);
         
+        const invoiceCreatorName = invoiceData.creator_name || "Unknown";
+        setCreatorName(invoiceCreatorName);
+        
         const fullInvoice: Invoice = {
           id: invoiceData.id,
           invoiceNumber: invoiceData.invoice_number,
@@ -191,6 +159,8 @@ const InvoiceView = () => {
           notes: invoiceData.notes || '',
           currency: invoiceData.currency,
           discount: Number(invoiceData.discount || 0),
+          creatorId: invoiceData.creator_id,
+          creatorName: invoiceData.creator_name,
           paymentDetails: paymentData ? {
             accountHolder: paymentData.account_holder,
             bankName: paymentData.bank_name,
@@ -214,13 +184,13 @@ const InvoiceView = () => {
     };
     
     fetchInvoice();
-  }, [id, navigate, creatorName]);
+  }, [id, navigate]);
   
   const handleDownloadPDF = async () => {
     if (!invoice) return;
     
     try {
-      await generatePDF(invoice, true, creatorName || undefined);
+      await generatePDF(invoice, true, invoice.creatorName || undefined);
       toast.success("Invoice downloaded successfully");
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -409,7 +379,7 @@ const InvoiceView = () => {
                 <InvoiceDetails 
                   invoice={invoice} 
                   companySettings={companySettings}
-                  creatorName={creatorName}
+                  creatorName={invoice.creatorName || creatorName}
                 />
               </div>
             </CardContent>
