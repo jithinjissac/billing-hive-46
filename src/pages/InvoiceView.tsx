@@ -91,6 +91,20 @@ const InvoiceView = () => {
     }
   };
   
+  const handlePrintPDF = async () => {
+    if (!pdfPreview) return;
+    
+    // Open PDF in new window and print it
+    const printWindow = window.open(pdfPreview, '_blank');
+    if (printWindow) {
+      printWindow.addEventListener('load', () => {
+        printWindow.print();
+      });
+    } else {
+      toast.error("Unable to open print window. Please check your pop-up blocker settings.");
+    }
+  };
+  
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -126,7 +140,7 @@ const InvoiceView = () => {
           <h1 className="text-3xl font-bold tracking-tight">Invoice #{invoice.invoiceNumber}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={handlePrintPDF}>
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>

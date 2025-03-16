@@ -12,6 +12,7 @@ export interface InvoiceItem {
   description: string;
   quantity: number;
   price: number;
+  specs?: string[]; // Added specs for detailed descriptions
 }
 
 export interface Invoice {

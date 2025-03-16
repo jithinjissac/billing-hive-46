@@ -14,8 +14,11 @@ export function CompanySettings() {
   const [phone, setPhone] = useState("+91-9961560545");
   const [website, setWebsite] = useState("www.techiussolutions.in");
   const [email, setEmail] = useState("info@techiussolutions.in");
+  const [slogan, setSlogan] = useState("EXPERIENCE THE DIGITAL INNOVATION");
   const [logo, setLogo] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
+  const [stamp, setStamp] = useState<File | null>(null);
+  const [stampUrl, setStampUrl] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load settings on component mount
@@ -28,6 +31,8 @@ export function CompanySettings() {
     setWebsite(settings.website);
     setEmail(settings.email);
     setLogoUrl(settings.logo);
+    setStampUrl(settings.stamp || "");
+    setSlogan(settings.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,6 +46,12 @@ export function CompanySettings() {
         newLogoUrl = URL.createObjectURL(logo);
       }
       
+      // Create new stamp URL if file was uploaded
+      let newStampUrl = stampUrl;
+      if (stamp) {
+        newStampUrl = URL.createObjectURL(stamp);
+      }
+      
       // Update settings
       updateCompanySettings({
         name: companyName,
@@ -49,7 +60,9 @@ export function CompanySettings() {
         phone,
         website,
         email,
-        logo: newLogoUrl
+        logo: newLogoUrl,
+        stamp: newStampUrl,
+        slogan
       });
       
       toast.success("Company settings updated successfully");
@@ -96,12 +109,54 @@ export function CompanySettings() {
         </div>
         
         <div className="space-y-2">
+          <Label htmlFor="stamp">Company Stamp</Label>
+          <div className="flex items-center gap-4">
+            <div className="h-20 w-32 rounded-md border border-input flex items-center justify-center overflow-hidden">
+              {stamp ? (
+                <img 
+                  src={URL.createObjectURL(stamp)} 
+                  alt="Company Stamp" 
+                  className="h-full w-full object-contain" 
+                />
+              ) : stampUrl ? (
+                <img 
+                  src={stampUrl} 
+                  alt="Company Stamp" 
+                  className="h-full w-full object-contain" 
+                />
+              ) : (
+                <div className="text-gray-400 text-sm text-center">No stamp uploaded</div>
+              )}
+            </div>
+            <Input
+              id="stamp"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setStamp(e.target.files[0]);
+                }
+              }}
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-2">
           <Label htmlFor="companyName">Company Name</Label>
           <Input
             id="companyName"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="slogan">Company Slogan</Label>
+          <Input
+            id="slogan"
+            value={slogan}
+            onChange={(e) => setSlogan(e.target.value)}
           />
         </div>
         

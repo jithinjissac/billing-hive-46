@@ -20,16 +20,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CurrencyCode } from "@/types/invoice";
+import { Separator } from "@/components/ui/separator";
+import { X, Plus } from "lucide-react";
 
 export function InvoiceSettings() {
-  const [invoicePrefix, setInvoicePrefix] = useState("INV-");
+  const [invoicePrefix, setInvoicePrefix] = useState("TS-INV/");
   const [defaultDueDays, setDefaultDueDays] = useState("30");
   const [defaultTaxRate, setDefaultTaxRate] = useState("10");
   const [defaultNotes, setDefaultNotes] = useState("Thank you for your business!");
-  const [accentColor, setAccentColor] = useState("#00BCD4");
+  const [accentColor, setAccentColor] = useState("#00b3b3");
   const [footerText, setFooterText] = useState("Logic will get you from A to B. Imagination will take you everywhere. - Albert Einstein");
   const [template, setTemplate] = useState("modern");
   const [defaultCurrency, setDefaultCurrency] = useState<CurrencyCode>("INR");
+  const [notes, setNotes] = useState<string[]>([
+    "Upgrading the current cloud hosting service plans are extra payable as per the client requirements.",
+    "Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters."
+  ]);
+  const [newNote, setNewNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Load settings on component mount
@@ -43,6 +50,10 @@ export function InvoiceSettings() {
     setFooterText(settings.footerText);
     setTemplate(settings.template);
     setDefaultCurrency(settings.defaultCurrency || "INR");
+    setNotes(settings.notes || [
+      "Upgrading the current cloud hosting service plans are extra payable as per the client requirements.",
+      "Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters."
+    ]);
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +70,8 @@ export function InvoiceSettings() {
         accentColor,
         footerText,
         template,
-        defaultCurrency
+        defaultCurrency,
+        notes
       });
       
       toast.success("Invoice settings updated successfully");
@@ -69,6 +81,17 @@ export function InvoiceSettings() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+  
+  const addNote = () => {
+    if (newNote.trim()) {
+      setNotes([...notes, newNote.trim()]);
+      setNewNote("");
+    }
+  };
+  
+  const removeNote = (index: number) => {
+    setNotes(notes.filter((_, i) => i !== index));
   };
   
   return (
@@ -136,23 +159,71 @@ export function InvoiceSettings() {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="defaultNotes">Default Notes</Label>
-          <Textarea
+          <Label htmlFor="defaultNotes">Default Thank You Message</Label>
+          <Input
             id="defaultNotes"
             value={defaultNotes}
             onChange={(e) => setDefaultNotes(e.target.value)}
-            rows={3}
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="footerText">Footer Text</Label>
+          <Label htmlFor="footerText">Footer Quote</Label>
           <Textarea
             id="footerText"
             value={footerText}
             onChange={(e) => setFooterText(e.target.value)}
             rows={2}
           />
+        </div>
+        
+        <Separator />
+        
+        <div className="space-y-2">
+          <Label>Invoice Notes</Label>
+          <div className="space-y-2">
+            {notes.map((note, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input 
+                  value={note} 
+                  onChange={(e) => {
+                    const newNotes = [...notes];
+                    newNotes[index] = e.target.value;
+                    setNotes(newNotes);
+                  }}
+                />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => removeNote(index)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 mt-2">
+              <Input 
+                placeholder="Add a new note"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addNote();
+                  }
+                }}
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon"
+                onClick={addNote}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
         
         <div className="space-y-2">

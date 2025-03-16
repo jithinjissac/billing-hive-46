@@ -12,28 +12,36 @@ import InvoiceView from "./pages/InvoiceView";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/invoices" element={<Invoices />} />
-          <Route path="/invoices/create" element={<InvoiceCreate />} />
-          <Route path="/invoices/:id" element={<InvoiceView />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Set app title to TechiusPay
+  useEffect(() => {
+    document.title = "TechiusPay - Invoice Management System";
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/invoices/create" element={<InvoiceCreate />} />
+            <Route path="/invoices/:id" element={<InvoiceView />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

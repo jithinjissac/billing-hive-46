@@ -27,9 +27,9 @@ export function addWrappedText(
     if (testWidth > maxWidth && i > 0) {
       // Add the line to the document with proper alignment
       if (options?.align === 'center') {
-        doc.text(line.trim(), x + maxWidth / 2, currentY, { align: 'center' });
+        doc.text(line.trim(), x, currentY, { align: 'center' });
       } else if (options?.align === 'right') {
-        doc.text(line.trim(), x + maxWidth, currentY, { align: 'right' });
+        doc.text(line.trim(), x, currentY, { align: 'right' });
       } else {
         doc.text(line.trim(), x, currentY);
       }
@@ -45,16 +45,16 @@ export function addWrappedText(
   // Add the last line
   if (line.trim() !== '') {
     if (options?.align === 'center') {
-      doc.text(line.trim(), x + maxWidth / 2, currentY, { align: 'center' });
+      doc.text(line.trim(), x, currentY, { align: 'center' });
     } else if (options?.align === 'right') {
-      doc.text(line.trim(), x + maxWidth, currentY, { align: 'right' });
+      doc.text(line.trim(), x, currentY, { align: 'right' });
     } else {
       doc.text(line.trim(), x, currentY);
     }
   }
   
   // Return the new Y position
-  return currentY + lineHeight;
+  return currentY;
 }
 
 /**

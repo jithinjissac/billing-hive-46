@@ -9,19 +9,25 @@ const defaultCompanySettings = {
   phone: "+91-9961560545",
   website: "www.techiussolutions.in",
   email: "info@techiussolutions.in",
-  logo: "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"
+  logo: "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png",
+  stamp: "", // Added stamp field
+  slogan: "EXPERIENCE THE DIGITAL INNOVATION" // Added company slogan
 };
 
 // Default invoice settings
 const defaultInvoiceSettings = {
-  invoicePrefix: "INV-",
+  invoicePrefix: "TS-INV/",
   defaultDueDays: 30,
   defaultTaxRate: 10,
   accentColor: "#00b3b3",
   defaultNotes: "Thank you for your business!",
   footerText: "Logic will get you from A to B. Imagination will take you everywhere. - Albert Einstein",
   template: "modern",
-  defaultCurrency: "INR" as CurrencyCode
+  defaultCurrency: "INR" as CurrencyCode,
+  notes: [
+    "Upgrading the current cloud hosting service plans are extra payable as per the client requirements.",
+    "Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters."
+  ]
 };
 
 // Available currencies

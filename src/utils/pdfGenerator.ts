@@ -1,6 +1,7 @@
+
 import { Invoice, CurrencyCode } from "@/types/invoice";
 import { formatCurrency, formatDate, convertNumberToWords } from "./formatters";
-import { addWrappedText, createTableRow } from "./pdfHelpers";
+import { addWrappedText } from "./pdfHelpers";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { getCompanySettings, getInvoiceSettings } from "@/services/settingsService";
@@ -25,239 +26,212 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     });
     
     const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
     const margin = 15;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Get company settings
+    // Get company settings and invoice settings
     const companySettings = getCompanySettings();
     const invoiceSettings = getInvoiceSettings();
     
-    // Header section - Company logo and details
-    const headerHeight = 30;
-    doc.setFillColor(255, 255, 255);
-    doc.rect(margin, margin, contentWidth, headerHeight, 'F');
+    // Get currency code
+    const currencyCode = invoice.currency as CurrencyCode || "INR" as CurrencyCode;
     
-    // Add logo image if available
+    // Set up the currency symbol
+    let currencySymbol = "₹";
+    if (currencyCode === "USD") currencySymbol = "$";
+    else if (currencyCode === "GBP") currencySymbol = "£";
+    else if (currencyCode === "AUD") currencySymbol = "A$";
+    
+    // Add accent bar at the top (teal color)
+    doc.setFillColor(0, 179, 179); // #00b3b3 - teal
+    doc.rect(0, 0, pageWidth, 10, 'F');
+    
+    // Header section with logo and company info
+    const headerHeight = 30;
+    doc.setDrawColor(221, 221, 221); // #ddd
+    doc.setLineWidth(0.5);
+    
+    // Add company logo
     try {
-      // Use company logo from settings
-      doc.addImage(companySettings.logo, 'PNG', margin, margin, 30, 20);
+      doc.addImage(companySettings.logo, 'JPEG', margin, 15, 40, 15);
+      doc.setFontSize(10);
+      doc.setTextColor(85, 85, 85); // #555
+      doc.text(companySettings.slogan, margin, 35);
     } catch (error) {
       console.error("Could not add logo image:", error);
     }
-    
-    // Add company header text
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 136, 204); // #0088cc
-    doc.setFontSize(24);
-    
-    const nameParts = companySettings.name.split(' ');
-    doc.text(nameParts[0] || "TECHIUS", margin + 32, margin + 10);
-    
-    if (nameParts.length > 1) {
-      doc.setTextColor(255, 204, 0); // #ffcc00
-      doc.setFontSize(20);
-      doc.text(nameParts.slice(1).join(' ') || "SOLUTIONS", margin + 32, margin + 17);
-    }
-    
-    doc.setFontSize(10);
-    doc.setTextColor(102, 102, 102); // #666
-    doc.text("EXPERIENCE THE DIGITAL INNOVATION", margin + 32, margin + 22);
     
     // Add company details on the right
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     
-    // Right-aligned company information
-    let companyInfo = [
-      { label: `${companySettings.name},`, value: ` ${companySettings.address.split(',')[0]}` },
-      { label: "UAM No:", value: ` ${companySettings.uamNumber}` },
-      { label: "Phone :", value: ` ${companySettings.phone}` },
-      { label: "Web :", value: ` ${companySettings.website}` },
-      { label: "E-mail :", value: ` ${companySettings.email}` }
-    ];
+    // Company information - right aligned
+    const companyInfo = `${companySettings.name}, ${companySettings.address}\nUAM No: ${companySettings.uamNumber}\nPhone : ${companySettings.phone}\nWeb : ${companySettings.website}\nE-mail : ${companySettings.email}`;
     
-    companyInfo.forEach((item, index) => {
-      const y = margin + 5 + (index * 5);
-      const text = `${item.label}${item.value}`;
-      // Calculate text width for right alignment
-      doc.setFont("helvetica", "normal");
-      const textWidth = doc.getTextWidth(text);
-      doc.text(text, pageWidth - margin - textWidth, y);
+    // Right align the text
+    const companyInfoLines = companyInfo.split('\n');
+    companyInfoLines.forEach((line, i) => {
+      const textWidth = doc.getTextWidth(line);
+      doc.text(line, pageWidth - margin - textWidth, 20 + (i * 5));
     });
     
-    // Add teal border line
-    doc.setDrawColor(0, 179, 179); // #00b3b3
-    doc.setLineWidth(1);
-    doc.line(margin, margin + headerHeight, pageWidth - margin, margin + headerHeight);
+    // Add border line after header
+    doc.line(margin, 40, pageWidth - margin, 40);
     
-    // Invoice title and customer section
-    const invoiceTitleY = margin + headerHeight + 10;
+    // Invoice title and details section with light gray background
     doc.setFillColor(249, 249, 249); // #f9f9f9
-    doc.rect(margin, invoiceTitleY - 5, contentWidth, 40, 'F');
+    doc.rect(margin, 45, contentWidth, 20, 'F');
     
-    doc.setTextColor(102, 102, 102); // #666
+    // Add Invoice title
     doc.setFontSize(28);
-    doc.setFont("helvetica", "normal");
-    doc.text("INVOICE", margin + 5, invoiceTitleY + 5);
-    
-    // Bill To section
-    doc.setFillColor(0, 179, 179); // #00b3b3
-    doc.rect(margin + 5, invoiceTitleY + 10, 30, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("BILL TO", margin + 7, invoiceTitleY + 16);
-    
-    // Customer information
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    
-    // Customer name and address with word wrap
-    let customerY = invoiceTitleY + 25;
-    doc.text(invoice.customer.name, margin + 5, customerY);
-    customerY += 6;
-    
-    // Process address with word wrap
-    doc.setFont("helvetica", "normal");
-    customerY = addWrappedText(
-      doc, 
-      invoice.customer.address, 
-      margin + 5, 
-      customerY, 
-      contentWidth / 2 - 10
-    );
-    
-    // Invoice details on the right
-    doc.setFont("helvetica", "bold");
-    doc.text("Date :", pageWidth - margin - 60, invoiceTitleY + 5);
-    doc.setFont("helvetica", "normal");
-    doc.text(formatDate(invoice.date), pageWidth - margin - 30, invoiceTitleY + 5);
-    
-    doc.setFont("helvetica", "bold");
-    doc.text("Invoice No :", pageWidth - margin - 60, invoiceTitleY + 12);
-    doc.setFont("helvetica", "normal");
-    doc.text(invoice.invoiceNumber, pageWidth - margin - 30, invoiceTitleY + 12);
-    
-    // Currency info if available - Here's the first fix: Cast currency as CurrencyCode
-    if (invoice.currency) {
-      doc.setFont("helvetica", "bold");
-      doc.text("Currency :", pageWidth - margin - 60, invoiceTitleY + 19);
-      doc.setFont("helvetica", "normal");
-      doc.text(invoice.currency, pageWidth - margin - 30, invoiceTitleY + 19);
-    }
-    
-    // Invoice items section
-    const tableStartY = Math.max(customerY, invoiceTitleY + 40);
-    doc.setDrawColor(221, 221, 221); // #ddd
-    doc.setLineWidth(0.5);
-    doc.line(margin, tableStartY, pageWidth - margin, tableStartY);
-    
     doc.setTextColor(102, 102, 102); // #666
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("ITEM", margin, tableStartY - 5);
-    doc.text("AMOUNT", pageWidth - margin - 25, tableStartY - 5, { align: "right" });
+    doc.text("INVOICE", margin + 5, 60);
     
-    // Items content with proper wrapping
-    let y = tableStartY + 10;
+    // Add invoice details on the right
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
     
-    if (invoice.items.length > 0) {
-      // Group header - customer name + purpose if available
-      doc.setTextColor(0, 102, 204); // #0066cc
-      doc.setFont("helvetica", "bold");
-      const groupHeader = `${invoice.customer.name} Website Annual Charges`;
-      doc.text(groupHeader, margin, y);
-      y += 10;
+    // Format the date properly
+    const formattedDate = formatDate(invoice.date);
+    
+    // Right align the details
+    const details = [
+      `Date : ${formattedDate}`,
+      `Invoice No : ${invoice.invoiceNumber}`
+    ];
+    
+    details.forEach((line, i) => {
+      const textWidth = doc.getTextWidth(line);
+      doc.text(line, pageWidth - margin - textWidth, 53 + (i * 5));
+    });
+    
+    // Client details section
+    // Add the "BILL TO" label with teal background
+    doc.setFillColor(0, 179, 179); // #00b3b3
+    doc.rect(margin, 70, 25, 7, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text("BILL TO", margin + 5, 75);
+    
+    // Add client information
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    
+    // Split address into lines and add them
+    const clientInfo = `${invoice.customer.name}\n${invoice.customer.address}`;
+    const clientInfoLines = clientInfo.split('\n');
+    
+    // Add each line of the address
+    clientInfoLines.forEach((line, i) => {
+      doc.text(line, margin, 85 + (i * 5));
+    });
+    
+    // Add border line after client details
+    doc.line(margin, 105, pageWidth - margin, 105);
+    
+    // Table header - items, description, amount
+    doc.setFillColor(249, 249, 249); // #f9f9f9
+    doc.rect(margin, 110, contentWidth, 10, 'F');
+    doc.setTextColor(102, 102, 102); // #666
+    doc.setFontSize(11);
+    doc.text("ITEM", margin + 5, 117);
+    doc.text("DESCRIPTION", pageWidth / 2 - 10, 117);
+    doc.text("AMOUNT", pageWidth - margin - 25, 117);
+    
+    // Add border line after table header
+    doc.line(margin, 120, pageWidth - margin, 120);
+    
+    // Table content - add items with descriptions and amounts
+    let y = 130;
+    doc.setTextColor(0, 0, 0);
+    
+    // Process each invoice item
+    invoice.items.forEach((item, i) => {
+      // Add item description (left column)
+      let itemY = y + (i * 30);
+      doc.setFontSize(11);
       
-      // Individual items with proper text wrapping
+      // Handle item description with word wrap
+      itemY = addWrappedText(
+        doc,
+        item.description,
+        margin + 5,
+        itemY,
+        contentWidth / 3 - 10
+      );
+      
+      // Add specs if available (middle column)
+      if (item.specs && item.specs.length > 0) {
+        doc.setFontSize(10);
+        doc.setTextColor(102, 102, 102); // #666
+        
+        let specsY = y + (i * 30);
+        item.specs.forEach((spec) => {
+          specsY += 5;
+          doc.text(`• ${spec}`, pageWidth / 2 - 10, specsY);
+        });
+      }
+      
+      // Add amount (right column)
+      doc.setFontSize(11);
       doc.setTextColor(0, 0, 0);
-      doc.setFont("helvetica", "normal");
+      const amount = `${currencySymbol} ${(item.quantity * item.price).toLocaleString('en-IN')}/-`;
+      const amountWidth = doc.getTextWidth(amount);
+      doc.text(amount, pageWidth - margin - amountWidth, y + (i * 30));
       
-      invoice.items.forEach(item => {
-        // Second fix: Cast currency as CurrencyCode
-        const currencyCode = invoice.currency as CurrencyCode || "INR" as CurrencyCode;
-        y = createTableRow(
-          doc,
-          item.description,
-          formatCurrency(item.price * item.quantity, currencyCode),
-          y,
-          margin,
-          pageWidth,
-          5 // indent by 5mm
-        );
-        y += 2; // add a bit of spacing between items
-      });
-    }
+      // Add line after each item (except the last one)
+      if (i < invoice.items.length - 1) {
+        doc.setDrawColor(221, 221, 221); // #ddd
+        doc.line(margin, y + (i * 30) + 15, pageWidth - margin, y + (i * 30) + 15);
+      }
+    });
     
-    // Draw line after items
-    y += 5;
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 10;
+    // Calculate the Y position after all items
+    let itemsEndY = y + ((invoice.items.length - 1) * 30) + 25;
     
-    // Third fix: Cast currency as CurrencyCode
-    const currencyCode = invoice.currency as CurrencyCode || "INR" as CurrencyCode;
+    // Add the subtotal row
+    doc.setFontSize(11);
+    doc.setFontSize(11);
+    doc.text("SUB TOTAL", margin + 5, itemsEndY);
+    const subtotalAmount = `${currencySymbol} ${invoice.subtotal.toLocaleString('en-IN')}/-`;
+    const subtotalWidth = doc.getTextWidth(subtotalAmount);
+    doc.text(subtotalAmount, pageWidth - margin - subtotalWidth, itemsEndY);
     
-    doc.setFont("helvetica", "bold");
-    doc.text("TOTAL", margin, y);
-    doc.text(formatCurrency(invoice.subtotal, currencyCode), pageWidth - margin, y, { align: "right" });
+    // Add border line after subtotal
+    doc.line(margin, itemsEndY + 5, pageWidth - margin, itemsEndY + 5);
     
-    // Draw line
-    y += 5;
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 10;
+    // Total section with amount in words and digits
+    itemsEndY += 20;
     
-    // Discount (using tax field from the invoice as discount)
-    doc.text("DISCOUNT", margin, y);
-    doc.setFont("helvetica", "normal");
-    doc.text(formatCurrency(invoice.tax, currencyCode), pageWidth - margin, y, { align: "right" });
-    
-    // Draw line
-    y += 5;
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 10;
-    
-    // Final amount
-    doc.setTextColor(204, 0, 0); // #cc0000
-    doc.setFont("helvetica", "bold");
-    doc.text("FINAL TO BE PAID", margin, y);
-    
-    // Fourth fix: Cast currency as CurrencyCode for amount in words
+    // Get amount in words
     const amountInWords = convertNumberToWords(invoice.total, currencyCode);
     
-    // Create properly sized and positioned boxes for the amounts
-    doc.setFillColor(102, 102, 102); // #666
+    // Add total section with colored backgrounds
+    doc.setFillColor(102, 102, 102); // #666 - dark gray
+    doc.rect(pageWidth - margin - 210, itemsEndY - 7, 150, 8, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
+    doc.setFontSize(10);
+    doc.text(`Rupees ${amountInWords}`, pageWidth - margin - 210 + 5, itemsEndY - 2);
     
-    // Words box - properly sized
-    const wordsWidth = Math.min(doc.getTextWidth(`Rupees ${amountInWords}`) + 10, 150);
-    doc.roundedRect(pageWidth - margin - wordsWidth - 35, y - 5, wordsWidth, 8, 1, 1, 'F');
-    doc.text(`Rupees ${amountInWords}`, pageWidth - margin - wordsWidth/2 - 35, y, { align: "center" });
-    
-    // Amount box
-    const amountText = formatCurrency(invoice.total, currencyCode);
-    const amountWidth = doc.getTextWidth(amountText) + 10;
+    // Add the amount with teal background
     doc.setFillColor(0, 179, 179); // #00b3b3
-    doc.roundedRect(pageWidth - margin - amountWidth, y - 5, amountWidth, 8, 1, 1, 'F');
-    doc.setFontSize(14);
-    doc.text(amountText, pageWidth - margin - amountWidth/2, y, { align: "center" });
+    doc.rect(pageWidth - margin - 50, itemsEndY - 7, 50, 8, 'F');
+    const totalAmount = `${currencySymbol} ${invoice.total.toLocaleString('en-IN')}/-`;
+    doc.text(totalAmount, pageWidth - margin - 10, itemsEndY - 2, { align: 'right' });
     
-    // Draw line
-    y += 10;
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 15;
+    // Add border line after total
+    doc.line(margin, itemsEndY + 5, pageWidth - margin, itemsEndY + 5);
     
-    // Payment details and signature
+    // Payment section with bank details and signature
+    itemsEndY += 15;
+    
+    // Payment details column
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("Payment Account Details", margin, y);
-    doc.line(margin, y + 2, margin + 60, y + 2);
-    y += 10;
-    
-    // Account details
-    doc.setFontSize(12);
+    doc.setFontSize(11);
+    doc.text("Payment Account Details", margin, itemsEndY);
+    doc.setDrawColor(0, 0, 0);
+    doc.line(margin, itemsEndY + 2, margin + 60, itemsEndY + 2);
     
     // Use invoice payment details if available, otherwise use default
     const paymentDetails = invoice.paymentDetails || {
@@ -268,65 +242,88 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
       branch: "Mallappally"
     };
     
-    const accountDetails = [
-      { label: "Account Holder:", value: ` ${paymentDetails.accountHolder}` },
-      { label: "Bank Name:", value: ` ${paymentDetails.bankName}` },
-      { label: "Account Number:", value: ` ${paymentDetails.accountNumber}` },
-      { label: "IFSC:", value: ` ${paymentDetails.ifsc}` },
-      { label: "Branch:", value: ` ${paymentDetails.branch}` }
+    // Add payment details
+    doc.setFontSize(10);
+    const details2 = [
+      `Account Holder: ${paymentDetails.accountHolder}`,
+      `Bank Name: ${paymentDetails.bankName}`,
+      `Account Number: ${paymentDetails.accountNumber}`,
+      `IFSC: ${paymentDetails.ifsc}`,
+      `Branch: ${paymentDetails.branch}`
     ];
     
-    accountDetails.forEach((detail, index) => {
-      doc.setFont("helvetica", "bold");
-      doc.text(detail.label, margin, y + (index * 6));
-      doc.setFont("helvetica", "normal");
-      doc.text(detail.value, margin + doc.getTextWidth(detail.label), y + (index * 6));
+    details2.forEach((line, i) => {
+      doc.text(line, margin, itemsEndY + 10 + (i * 5));
     });
     
-    // Signature
-    doc.setFont("helvetica", "normal");
-    doc.text("For Techius Solutions ,", pageWidth - margin - 50, y);
+    // Signature and stamp column
+    doc.setFontSize(10);
+    doc.text("For Techius Solutions,", pageWidth - margin - 50, itemsEndY + 5, { align: 'right' });
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 50, y + 10);
+    doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 50, itemsEndY + 15, { align: 'right' });
+    doc.setFont("helvetica", "normal");
+    
+    // Add stamp if available
+    if (companySettings.stamp) {
+      try {
+        doc.addImage(companySettings.stamp, 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
+      } catch (error) {
+        console.error("Could not add stamp image:", error);
+      }
+    }
+    
+    // Add border line after payment section
+    const paymentEndY = itemsEndY + 60;
+    doc.line(margin, paymentEndY, pageWidth - margin, paymentEndY);
     
     // Thank you message
-    const thankYouY = y + 60;
-    doc.line(margin, thankYouY - 5, pageWidth - margin, thankYouY - 5);
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(16);
-    doc.text("Thank You for your business !", pageWidth / 2, thankYouY, { align: "center" });
-    doc.line(margin, thankYouY + 5, pageWidth - margin, thankYouY + 5);
+    doc.text(invoiceSettings.defaultNotes, pageWidth / 2, paymentEndY + 10, { align: 'center' });
     
-    // Quote
+    // Add border lines above and below thank you message
+    doc.line(margin, paymentEndY + 15, pageWidth - margin, paymentEndY + 15);
+    
+    // Quote section with gray background
     doc.setFillColor(102, 102, 102); // #666
-    doc.rect(margin, thankYouY + 10, contentWidth, 15, 'F');
+    doc.rect(margin, paymentEndY + 20, contentWidth, 15, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "italic");
     
-    // Use footer text from invoice settings
+    // Add quote from settings
     addWrappedText(
       doc,
       invoiceSettings.footerText,
       pageWidth / 2,
-      thankYouY + 18,
+      paymentEndY + 28,
       contentWidth - 20,
       5,
-      { align: "center" }
+      { align: 'center' }
     );
     
-    // Footer note
+    // Notes section with teal background
     doc.setFillColor(0, 179, 179); // #00b3b3
-    doc.rect(margin, thankYouY + 30, contentWidth, 15, 'F');
+    doc.rect(margin, paymentEndY + 40, contentWidth, 25, 'F');
     doc.setFont("helvetica", "bold");
-    doc.text("Note:", margin + 5, thankYouY + 38);
+    doc.setFontSize(11);
+    doc.text("Note:", margin + 5, paymentEndY + 50);
+    
+    // Add notes from settings
     doc.setFont("helvetica", "normal");
-    doc.text("• Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters.", 
-      margin + 25, thankYouY + 38);
+    doc.setFontSize(10);
+    const notes = invoiceSettings.notes || [
+      "Upgrading the current cloud hosting service plans are extra payable as per the client requirements.",
+      "Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters."
+    ];
+    
+    notes.forEach((note, i) => {
+      doc.text(`• ${note}`, margin + 15, paymentEndY + 50 + ((i + 1) * 6));
+    });
     
     // Save the PDF for download if requested
     if (autoDownload) {
-      const pdfName = `Invoice_${invoice.invoiceNumber}.pdf`;
+      const pdfName = `${invoice.customer.name}_${invoice.invoiceNumber}.pdf`;
       doc.save(pdfName);
     }
     
