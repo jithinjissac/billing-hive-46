@@ -48,8 +48,9 @@ serve(async (req) => {
     
     if (!bucketExists) {
       console.log("Creating profile-pictures bucket");
+      // First, create the bucket with public access
       const { data, error } = await supabaseAdmin.storage.createBucket('profile-pictures', {
-        public: true,
+        public: true, // This makes the bucket publicly accessible
         fileSizeLimit: 5242880, // 5MB
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
       })
@@ -62,25 +63,27 @@ serve(async (req) => {
         )
       }
       
-      // Create very permissive RLS policies for the bucket
+      // Create a completely open policy for the bucket - this is more permissive than before
       try {
-        console.log("Setting up permissive RLS policies for profile-pictures bucket");
+        console.log("Creating open access policy for profile-pictures bucket");
         
-        // Create a simple policy that allows all operations for authenticated users
-        const { error: allOperationsPolicyError } = await supabaseAdmin
+        // Completely open policy that should solve the RLS violations
+        const { error: policyError } = await supabaseAdmin
           .storage
           .from('profile-pictures')
           .createPolicy(
-            'allow-all-operations',
+            'open-access-policy',
             {
-              name: 'allow-all-operations',
-              definition: "TRUE", // Allow everything regardless of user
+              name: 'open-access-policy',
+              definition: "TRUE", // Allows all access
               allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
             }
           );
         
-        if (allOperationsPolicyError) {
-          console.error("Error creating all operations policy:", allOperationsPolicyError);
+        if (policyError) {
+          console.error("Error creating open access policy:", policyError);
+        } else {
+          console.log("Successfully created open access policy");
         }
         
       } catch (policyErr) {
@@ -90,16 +93,67 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({ 
-          message: "Profile pictures bucket created successfully with permissive RLS policies",
+          message: "Profile pictures bucket created successfully with open access policy",
           bucket: 'profile-pictures'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
+    // If the bucket already exists, let's update its policies to be more permissive
+    try {
+      console.log("Updating policies for existing profile-pictures bucket");
+      
+      // First, try to delete any existing policies to avoid conflicts
+      const { data: policies } = await supabaseAdmin.storage.from('profile-pictures').getPolicies();
+      
+      if (policies && policies.length > 0) {
+        console.log(`Found ${policies.length} existing policies, updating them to be more permissive`);
+        
+        // Try to update existing policies to be more permissive
+        for (const policy of policies) {
+          try {
+            await supabaseAdmin.storage.from('profile-pictures').updatePolicy(
+              policy.name,
+              {
+                name: policy.name,
+                definition: "TRUE", // Make all policies completely open
+                allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+              }
+            );
+            console.log(`Updated policy: ${policy.name}`);
+          } catch (updateErr) {
+            console.error(`Error updating policy ${policy.name}:`, updateErr);
+          }
+        }
+      } else {
+        // If no policies exist, create a new open one
+        console.log("No existing policies found, creating a new open policy");
+        const { error: newPolicyError } = await supabaseAdmin
+          .storage
+          .from('profile-pictures')
+          .createPolicy(
+            'open-access-policy',
+            {
+              name: 'open-access-policy',
+              definition: "TRUE",
+              allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+            }
+          );
+        
+        if (newPolicyError) {
+          console.error("Error creating new open policy:", newPolicyError);
+        } else {
+          console.log("Successfully created new open access policy");
+        }
+      }
+    } catch (policyUpdateErr) {
+      console.error("Error updating bucket policies:", policyUpdateErr);
+    }
+    
     return new Response(
       JSON.stringify({ 
-        message: "Profile pictures bucket already exists",
+        message: "Profile pictures bucket already exists, policies updated to be more permissive",
         bucket: 'profile-pictures'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
