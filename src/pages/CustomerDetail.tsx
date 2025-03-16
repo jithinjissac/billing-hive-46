@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, Phone, MapPin, FileText, Eye } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, FileText, Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Customer } from "@/types/invoice";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { format } from "date-fns";
+import { CustomerDialog } from "@/components/customers/CustomerDialog";
 
 interface CustomerInvoice {
   id: string;
@@ -32,6 +33,8 @@ const CustomerDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalInvoices, setTotalInvoices] = useState(0);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const invoicesPerPage = 10;
 
   useEffect(() => {
@@ -85,7 +88,8 @@ const CustomerDetail = () => {
         if (countError) {
           console.error("Error counting invoices:", countError);
         } else if (count !== null) {
-          setTotalPages(Math.ceil(count / invoicesPerPage));
+          setTotalInvoices(count);
+          setTotalPages(Math.ceil(count / invoicesPerPage) || 1);
         }
         
         // Fetch customer invoices with pagination
@@ -133,6 +137,11 @@ const CustomerDetail = () => {
         return "bg-gray-500 text-gray-50";
     }
   };
+
+  const handleCustomerUpdate = (updatedCustomer: Customer) => {
+    setCustomer(updatedCustomer);
+    toast.success("Customer details updated successfully");
+  };
   
   if (isLoading) {
     return (
@@ -168,7 +177,15 @@ const CustomerDetail = () => {
           </Button>
           <h1 className="text-3xl font-bold tracking-tight">Customer Details</h1>
         </div>
-        <div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsEditDialogOpen(true)}
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit Customer
+          </Button>
+          
           <Button onClick={() => navigate("/invoices/create", { state: { customerId: customer.id } })}>
             <FileText className="h-4 w-4 mr-2" />
             New Invoice
@@ -223,7 +240,7 @@ const CustomerDetail = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gray-100 p-4 rounded-lg">
                 <div className="text-sm text-muted-foreground">Total Invoices</div>
-                <div className="text-2xl font-bold">{(totalPages - 1) * invoicesPerPage + invoices.length}</div>
+                <div className="text-2xl font-bold">{totalInvoices}</div>
               </div>
               
               <div className="bg-emerald-50 p-4 rounded-lg">
@@ -356,6 +373,13 @@ const CustomerDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      <CustomerDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        customer={customer}
+        onSubmit={handleCustomerUpdate}
+      />
     </DashboardLayout>
   );
 };
