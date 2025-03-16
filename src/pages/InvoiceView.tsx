@@ -12,6 +12,7 @@ import { Invoice } from "@/types/invoice";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCompanySettings } from "@/services/settingsService";
+import { supabase } from "@/integrations/supabase/client";
 
 const InvoiceView = () => {
   const { id } = useParams();
@@ -94,14 +95,35 @@ const InvoiceView = () => {
   const handlePrintPDF = async () => {
     if (!pdfPreview) return;
     
-    // Open PDF in new window and print it
-    const printWindow = window.open(pdfPreview, '_blank');
-    if (printWindow) {
-      printWindow.addEventListener('load', () => {
-        printWindow.print();
-      });
-    } else {
-      toast.error("Unable to open print window. Please check your pop-up blocker settings.");
+    try {
+      // Create a temporary iframe
+      const printFrame = document.createElement('iframe');
+      printFrame.style.display = 'none';
+      document.body.appendChild(printFrame);
+      
+      // Set the PDF content
+      printFrame.src = pdfPreview;
+      
+      // Wait for iframe to load then print
+      printFrame.onload = () => {
+        try {
+          // Focus the iframe window
+          printFrame.contentWindow?.focus();
+          // Print the iframe
+          printFrame.contentWindow?.print();
+          
+          // Remove the iframe after printing (with a delay)
+          setTimeout(() => {
+            document.body.removeChild(printFrame);
+          }, 1000);
+        } catch (err) {
+          console.error('Print operation failed:', err);
+          toast.error("Print operation failed. Please try downloading instead.");
+        }
+      };
+    } catch (error) {
+      console.error("Error printing PDF:", error);
+      toast.error("Unable to print. Please check your browser settings or try downloading instead.");
     }
   };
   
