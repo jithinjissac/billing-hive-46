@@ -90,6 +90,7 @@ export type Database = {
           description: string
           id: string
           invoice_id: string
+          name: string | null
           price: number
           quantity: number
           updated_at: string | null
@@ -99,6 +100,7 @@ export type Database = {
           description: string
           id?: string
           invoice_id: string
+          name?: string | null
           price?: number
           quantity?: number
           updated_at?: string | null
@@ -108,6 +110,7 @@ export type Database = {
           description?: string
           id?: string
           invoice_id?: string
+          name?: string | null
           price?: number
           quantity?: number
           updated_at?: string | null

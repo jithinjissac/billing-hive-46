@@ -79,7 +79,7 @@ const InvoiceEdit = () => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
             id: item.id,
-            // Use nullish coalescing to provide a default empty string when name is missing
+            // Safely access the name property which now exists in the database
             name: item.name || "",
             description: item.description,
             quantity: item.quantity,
@@ -109,6 +109,7 @@ const InvoiceEdit = () => {
           total: Number(invoiceData.total),
           notes: invoiceData.notes || '',
           currency: invoiceData.currency,
+          discount: invoiceData.discount || 0,
           paymentDetails: paymentData ? {
             accountHolder: paymentData.account_holder,
             bankName: paymentData.bank_name,
@@ -177,7 +178,7 @@ const InvoiceEdit = () => {
           .from('invoice_items')
           .insert({
             invoice_id: id,
-            name: item.name || "",  // Include item name when updating
+            name: item.name || "",  // Properly include item name
             description: item.description,
             quantity: item.quantity,
             price: item.price
