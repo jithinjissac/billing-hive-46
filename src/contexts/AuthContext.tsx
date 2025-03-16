@@ -66,33 +66,44 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       console.log(`Fetching profile for user: ${userId}`);
       
-      const { data, error } = await supabase
+      const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error("Error fetching profile:", fetchError);
         toast.error("Failed to fetch profile");
         return;
       }
 
-      if (data) {
-        console.log("Profile data fetched:", data);
-        setProfile(data);
+      if (existingProfile) {
+        console.log("Profile data fetched:", existingProfile);
+        setProfile(existingProfile);
       } else {
-        console.log("Creating new profile for user:", userId);
+        // If profile doesn't exist, create it
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert([{ id: userId }])
+          .insert([
+            { 
+              id: userId,
+              first_name: null,
+              last_name: null,
+              phone: null,
+              address: null,
+              position: null,
+              profile_picture_url: null
+            }
+          ])
           .select()
           .single();
-          
+
         if (insertError) {
           console.error("Error creating profile:", insertError);
           toast.error("Failed to create profile");
         } else if (newProfile) {
+          console.log("New profile created:", newProfile);
           setProfile(newProfile);
         }
       }
@@ -146,7 +157,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       const { error } = await supabase
         .from('profiles')
-        .update(profileData)
+        .upsert({
+          id: user.id,
+          ...profileData,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', user.id);
 
       if (error) {
@@ -155,6 +170,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
+      // Fetch the updated profile
       await fetchProfile(user.id);
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -248,6 +264,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false);
     }
   }, []);
+
+  // Update the profile whenever the user changes
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfile(user.id);
+    }
+  }, [user?.id, fetchProfile]);
 
   // Memoize the context value to prevent unnecessary rerenders
   const value = useMemo(() => ({

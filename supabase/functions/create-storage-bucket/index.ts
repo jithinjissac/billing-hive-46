@@ -46,13 +46,13 @@ serve(async (req) => {
       
       if (error) throw error;
       
-      const { error: policyError } = await supabaseAdmin.storage.from('profile-pictures')
+      const { error: policyError } = await supabaseAdmin
+        .storage.from('profile-pictures')
         .createPolicy('Allow authenticated uploads', {
           name: 'Allow authenticated uploads',
           definition: `
             (bucket_id = 'profile-pictures'::text) AND
-            (auth.role() = 'authenticated'::text) AND
-            (auth.uid()::text = (storage.foldername(name))[1])
+            (auth.role() = 'authenticated'::text)
           `
         });
       
