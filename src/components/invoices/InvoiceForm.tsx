@@ -50,7 +50,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
   const [customerId, setCustomerId] = useState(invoiceData?.customer?.id || "");
   const [date, setDate] = useState(invoiceData?.date || new Date().toISOString().substring(0, 10));
   const [dueDate, setDueDate] = useState(invoiceData?.dueDate || getDefaultDueDate());
-  const [status, setStatus] = useState<"draft" | "pending" | "paid" | "overdue" | "cancelled">(
+  const [status, setStatus] = useState<"draft" | "pending" | "paid" | "overdue">(
     invoiceData?.status || "pending"
   );
   const [items, setItems] = useState<InvoiceItem[]>(invoiceData?.items || [
@@ -234,8 +234,8 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
   };
   
   const handleStatusChange = (value: string) => {
-    if (value === "draft" || value === "pending" || value === "paid" || value === "overdue" || value === "cancelled") {
-      setStatus(value);
+    if (value === "draft" || value === "pending" || value === "paid" || value === "overdue") {
+      setStatus(value as "draft" | "pending" | "paid" | "overdue");
     }
   };
   
@@ -332,7 +332,6 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="paid">Paid</SelectItem>
               <SelectItem value="overdue">Overdue</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -510,4 +509,3 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
     </form>
   );
 }
-

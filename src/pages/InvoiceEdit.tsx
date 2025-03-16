@@ -133,11 +133,7 @@ const InvoiceEdit = () => {
     try {
       setIsSubmitting(true);
       
-      let status = updatedInvoice.status;
-      
-      if (status === "cancelled") {
-        status = "draft";
-      }
+      const status = updatedInvoice.status;
       
       const { error: invoiceError } = await supabase
         .from('invoices')

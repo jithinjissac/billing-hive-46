@@ -23,11 +23,7 @@ const InvoiceCreate = () => {
       const currency = (invoice.currency as CurrencyCode) || "INR";
       
       // Ensure status is a valid database enum value
-      let status = invoice.status;
-      // Type assertion to match database enum
-      if (status === "cancelled") {
-        status = "draft"; // Use draft as fallback since cancelled isn't in the DB enum
-      }
+      const status = invoice.status;
       
       // First, insert the invoice record
       const { data: invoiceData, error: invoiceError } = await supabase
