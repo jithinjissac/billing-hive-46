@@ -34,14 +34,34 @@ export function InvoicesList({ searchQuery = "", statusFilter = "all" }: Invoice
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasCreatorColumns, setHasCreatorColumns] = useState(false);
   
   useEffect(() => {
+    checkCreatorColumns();
     fetchInvoices();
   }, []);
   
   useEffect(() => {
     applyFilters();
   }, [searchQuery, statusFilter, invoices]);
+  
+  const checkCreatorColumns = async () => {
+    try {
+      const { data: columnInfo } = await supabase
+        .from('invoices')
+        .select('*')
+        .limit(1);
+        
+      setHasCreatorColumns(
+        columnInfo && 
+        columnInfo.length > 0 && 
+        'creator_id' in columnInfo[0] && 
+        'creator_name' in columnInfo[0]
+      );
+    } catch (error) {
+      console.error("Error checking invoice columns:", error);
+    }
+  };
   
   const fetchInvoices = async () => {
     try {
@@ -76,6 +96,10 @@ export function InvoicesList({ searchQuery = "", statusFilter = "all" }: Invoice
         notes: inv.notes,
         items: [], // Add the missing items property as an empty array
         discount: Number(inv.discount) || 0,
+        ...(hasCreatorColumns && {
+          creatorId: inv.creator_id,
+          creatorName: inv.creator_name,
+        }),
         customer: {
           id: inv.customers.id,
           name: inv.customers.name,

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -71,11 +70,21 @@ const InvoiceView = () => {
           return;
         }
         
-        const { data: invoiceData, error: invoiceError } = await supabase
+        const { data: columnInfo } = await supabase
           .from('invoices')
-          .select('*, creator_id, creator_name')
+          .select('*')
+          .limit(1);
+          
+        const hasCreatorColumns = columnInfo && columnInfo.length > 0 && 
+          'creator_id' in columnInfo[0] && 'creator_name' in columnInfo[0];
+        
+        const query = supabase
+          .from('invoices')
+          .select('*')
           .eq('id', id)
           .single();
+        
+        const { data: invoiceData, error: invoiceError } = await query;
         
         if (invoiceError) {
           console.error("Error fetching invoice:", invoiceError);
@@ -137,8 +146,7 @@ const InvoiceView = () => {
         
         console.log("Notes from DB:", invoiceData.notes);
         
-        // Handle creator information
-        const invoiceCreatorName = invoiceData.creator_name || "Unknown";
+        const invoiceCreatorName = hasCreatorColumns ? (invoiceData.creator_name || "Unknown") : "Unknown";
         setCreatorName(invoiceCreatorName);
         
         const fullInvoice: Invoice = {
@@ -161,8 +169,8 @@ const InvoiceView = () => {
           notes: invoiceData.notes || '',
           currency: invoiceData.currency,
           discount: Number(invoiceData.discount || 0),
-          creatorId: invoiceData.creator_id,
-          creatorName: invoiceData.creator_name,
+          creatorId: hasCreatorColumns ? invoiceData.creator_id : undefined,
+          creatorName: hasCreatorColumns ? invoiceData.creator_name : undefined,
           paymentDetails: paymentData ? {
             accountHolder: paymentData.account_holder,
             bankName: paymentData.bank_name,
