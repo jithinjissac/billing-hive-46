@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Printer, Download, ArrowLeft, Edit, Eye } from "lucide-react";
+import { Printer, Download, ArrowLeft, Edit, Eye, Check } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoiceDetails } from "@/components/invoices/InvoiceDetails";
 import { generatePDF } from "@/utils/pdf";
@@ -12,6 +12,13 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCompanySettings } from "@/services/settingsService";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
 
 const InvoiceView = () => {
   const { id } = useParams();
@@ -21,6 +28,7 @@ const InvoiceView = () => {
   const [activeTab, setActiveTab] = useState("details");
   const [pdfPreview, setPdfPreview] = useState<string | undefined>(undefined);
   const [companySettings, setCompanySettings] = useState(getCompanySettings());
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
   // Listen for settings changes
   useEffect(() => {
@@ -215,6 +223,56 @@ const InvoiceView = () => {
     }
   };
   
+  // Handle invoice status update
+  const handleStatusChange = async (newStatus: string) => {
+    if (!invoice || !id) return;
+    
+    try {
+      setIsUpdatingStatus(true);
+      
+      // Update the invoice status in the database
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: newStatus })
+        .eq('id', id);
+      
+      if (error) {
+        console.error("Error updating invoice status:", error);
+        toast.error("Failed to update invoice status");
+        return;
+      }
+      
+      // Update the local invoice object
+      setInvoice(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: newStatus
+        };
+      });
+      
+      toast.success(`Invoice status updated to ${newStatus}`);
+    } catch (error) {
+      console.error("Error updating invoice status:", error);
+      toast.error("Failed to update invoice status");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+  
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return "bg-emerald-500 hover:bg-emerald-600";
+      case 'pending':
+        return "bg-amber-500 hover:bg-amber-600";
+      case 'overdue':
+        return "bg-rose-500 hover:bg-rose-600";
+      default:
+        return "bg-gray-500 hover:bg-gray-600";
+    }
+  };
+  
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -250,6 +308,27 @@ const InvoiceView = () => {
           <h1 className="text-3xl font-bold tracking-tight">Invoice #{invoice.invoiceNumber}</h1>
         </div>
         <div className="flex items-center gap-2">
+          {/* Status Update Dropdown */}
+          <div className="flex items-center mr-2">
+            <span className="text-sm text-muted-foreground mr-2">Status:</span>
+            <Select
+              value={invoice.status}
+              onValueChange={handleStatusChange}
+              disabled={isUpdatingStatus}
+            >
+              <SelectTrigger className={`w-32 ${getStatusColor(invoice.status)} text-white`}>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
           <Button variant="outline" onClick={handlePrintPDF}>
             <Printer className="h-4 w-4 mr-2" />
             Print

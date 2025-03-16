@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 import { SectionPositions } from "./types";
 import { Invoice, CurrencyCode } from "@/types/invoice";
@@ -22,12 +21,12 @@ export function addHeaderSection(
   doc.setDrawColor(221, 221, 221); // #ddd
   doc.setLineWidth(0.5);
   
-  // Add company logo
+  // Add company logo with bigger size
   try {
-    doc.addImage(companySettings.logo || companySettings.logo_url || "/placeholder.svg", 'JPEG', margin, 15, 40, 15);
+    doc.addImage(companySettings.logo || companySettings.logo_url || "/placeholder.svg", 'JPEG', margin, 15, 50, 20);
     doc.setFontSize(10);
     doc.setTextColor(85, 85, 85); // #555
-    doc.text(companySettings.slogan, margin, 35);
+    doc.text(companySettings.slogan, margin, 40);
   } catch (error) {
     console.error("Could not add logo image:", error);
   }
@@ -47,7 +46,7 @@ export function addHeaderSection(
   });
   
   // Add border line after header
-  doc.line(margin, 40, pageWidth - margin, 40);
+  doc.line(margin, 45, pageWidth - margin, 45);
 }
 
 /**
@@ -309,10 +308,10 @@ export function addPaymentSection(
   doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 50, itemsEndY + 15, { align: 'right' });
   doc.setFont("helvetica", "normal");
   
-  // Add stamp if available
+  // Add stamp if available (with larger size)
   if (companySettings.stamp || companySettings.stamp_url) {
     try {
-      doc.addImage(companySettings.stamp || companySettings.stamp_url, 'JPEG', pageWidth - margin - 80, itemsEndY + 20, 30, 30);
+      doc.addImage(companySettings.stamp || companySettings.stamp_url, 'JPEG', pageWidth - margin - 90, itemsEndY + 20, 35, 35);
     } catch (error) {
       console.error("Could not add stamp image:", error);
     }

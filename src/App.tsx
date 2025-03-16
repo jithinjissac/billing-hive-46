@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Invoices from "./pages/Invoices";
 import InvoiceCreate from "./pages/InvoiceCreate";
 import InvoiceView from "./pages/InvoiceView";
+import InvoiceEdit from "./pages/InvoiceEdit";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -34,6 +35,7 @@ const App = () => {
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/invoices/create" element={<InvoiceCreate />} />
             <Route path="/invoices/:id" element={<InvoiceView />} />
+            <Route path="/invoices/edit/:id" element={<InvoiceEdit />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />

@@ -89,7 +89,7 @@ export function InvoiceDetails({
           <img
             src={companySettings.logo || "/placeholder.svg"}
             alt="Logo"
-            className="h-12 w-auto"
+            className="h-20 w-auto" // Increased logo size from h-12 to h-20
           />
           <div className="text-xs text-gray-500 mt-1">{companySettings.slogan}</div>
         </div>
@@ -193,7 +193,7 @@ export function InvoiceDetails({
             <img 
               src={companySettings.stamp} 
               alt="Company Stamp"
-              className="w-20 h-auto inline-block"
+              className="w-24 h-auto inline-block" // Increased stamp size from w-20 to w-24
             />
           )}
         </div>
