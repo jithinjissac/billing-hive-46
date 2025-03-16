@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -11,6 +12,8 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { Invoice } from "@/types/invoice";
+import { getCompanySettings, getInvoiceSettings } from "@/services/settingsService";
+import { useEffect, useState } from "react";
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
@@ -26,17 +29,27 @@ interface InvoiceDetailsProps {
 }
 
 export function InvoiceDetails({ 
-  invoice, 
-  companySettings = {
-    name: "Techius Solutions",
-    address: "Mallappally, Kerala",
-    uamNumber: "KL11D0004260",
-    phone: "+91-9961560545",
-    website: "www.techiussolutions.in",
-    email: "info@techiussolutions.in",
-    logo: "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"
-  }
+  invoice,
+  companySettings: initialCompanySettings
 }: InvoiceDetailsProps) {
+  const [companySettings, setCompanySettings] = useState(
+    initialCompanySettings || getCompanySettings()
+  );
+  const [invoiceSettings, setInvoiceSettings] = useState(getInvoiceSettings());
+  
+  // Listen for settings changes
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setCompanySettings(getCompanySettings());
+      setInvoiceSettings(getInvoiceSettings());
+    };
+    
+    window.addEventListener('settings-updated', handleSettingsUpdate);
+    return () => {
+      window.removeEventListener('settings-updated', handleSettingsUpdate);
+    };
+  }, []);
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
@@ -82,7 +95,7 @@ export function InvoiceDetails({
         <div>
           <div className="text-sm text-gray-500">Bill To</div>
           <div className="font-medium">{invoice.customer.name}</div>
-          <div className="text-sm text-gray-500">{invoice.customer.address}</div>
+          <div className="text-sm text-gray-500 whitespace-pre-line">{invoice.customer.address}</div>
           {invoice.customer.email && (
             <div className="text-sm text-gray-500">{invoice.customer.email}</div>
           )}
@@ -101,6 +114,9 @@ export function InvoiceDetails({
             
             <div className="text-sm text-gray-500">Due Date:</div>
             <div>{formatDate(invoice.dueDate)}</div>
+            
+            <div className="text-sm text-gray-500">Currency:</div>
+            <div>{invoice.currency || "INR"}</div>
           </div>
         </div>
       </div>
@@ -119,25 +135,25 @@ export function InvoiceDetails({
         <TableBody>
           {invoice.items.map((item) => (
             <TableRow key={item.id}>
-              <TableCell>{item.description}</TableCell>
+              <TableCell className="align-top">{item.description}</TableCell>
               <TableCell className="text-right">{item.quantity}</TableCell>
-              <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-              <TableCell className="text-right">{formatCurrency(item.quantity * item.price)}</TableCell>
+              <TableCell className="text-right">{formatCurrency(item.price, invoice.currency as any)}</TableCell>
+              <TableCell className="text-right">{formatCurrency(item.quantity * item.price, invoice.currency as any)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
         <TableFooter>
           <TableRow>
             <TableCell colSpan={3} className="text-right">Subtotal</TableCell>
-            <TableCell className="text-right">{formatCurrency(invoice.subtotal)}</TableCell>
+            <TableCell className="text-right">{formatCurrency(invoice.subtotal, invoice.currency as any)}</TableCell>
           </TableRow>
           <TableRow>
             <TableCell colSpan={3} className="text-right">Tax</TableCell>
-            <TableCell className="text-right">{formatCurrency(invoice.tax)}</TableCell>
+            <TableCell className="text-right">{formatCurrency(invoice.tax, invoice.currency as any)}</TableCell>
           </TableRow>
           <TableRow>
             <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
-            <TableCell className="text-right font-bold">{formatCurrency(invoice.total)}</TableCell>
+            <TableCell className="text-right font-bold">{formatCurrency(invoice.total, invoice.currency as any)}</TableCell>
           </TableRow>
         </TableFooter>
       </Table>
@@ -150,7 +166,7 @@ export function InvoiceDetails({
       )}
       
       <div className="mt-8 text-center">
-        <p className="text-sm text-gray-500">Thank you for your business!</p>
+        <p className="text-sm text-gray-500">{invoiceSettings.defaultNotes}</p>
       </div>
     </div>
   );

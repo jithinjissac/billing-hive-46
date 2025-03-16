@@ -1,4 +1,6 @@
 
+import { CurrencyCode, CurrencyInfo } from "@/types/invoice";
+
 // Default company settings
 const defaultCompanySettings = {
   name: "Techius Solutions",
@@ -18,12 +20,35 @@ const defaultInvoiceSettings = {
   accentColor: "#00b3b3",
   defaultNotes: "Thank you for your business!",
   footerText: "Logic will get you from A to B. Imagination will take you everywhere. - Albert Einstein",
-  template: "modern"
+  template: "modern",
+  defaultCurrency: "INR" as CurrencyCode
+};
+
+// Available currencies
+export const availableCurrencies: CurrencyInfo[] = [
+  { code: "INR", symbol: "₹", name: "Indian Rupee" },
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "GBP", symbol: "£", name: "British Pound" },
+  { code: "AUD", symbol: "A$", name: "Australian Dollar" }
+];
+
+// Database simulation (in a real app, this would be a database connection)
+const db = {
+  getItem: (key: string) => {
+    return localStorage.getItem(key);
+  },
+  setItem: (key: string, value: string) => {
+    localStorage.setItem(key, value);
+    // Trigger event for real-time updates
+    const event = new CustomEvent('settings-updated', { detail: { key, value } });
+    window.dispatchEvent(event);
+    return true;
+  }
 };
 
 // Get company settings
 export function getCompanySettings() {
-  const storedSettings = localStorage.getItem('companySettings');
+  const storedSettings = db.getItem('companySettings');
   if (storedSettings) {
     return JSON.parse(storedSettings);
   }
@@ -32,12 +57,12 @@ export function getCompanySettings() {
 
 // Update company settings
 export function updateCompanySettings(settings: typeof defaultCompanySettings) {
-  localStorage.setItem('companySettings', JSON.stringify(settings));
+  return db.setItem('companySettings', JSON.stringify(settings));
 }
 
 // Get invoice settings
 export function getInvoiceSettings() {
-  const storedSettings = localStorage.getItem('invoiceSettings');
+  const storedSettings = db.getItem('invoiceSettings');
   if (storedSettings) {
     return JSON.parse(storedSettings);
   }
@@ -46,5 +71,10 @@ export function getInvoiceSettings() {
 
 // Update invoice settings
 export function updateInvoiceSettings(settings: typeof defaultInvoiceSettings) {
-  localStorage.setItem('invoiceSettings', JSON.stringify(settings));
+  return db.setItem('invoiceSettings', JSON.stringify(settings));
+}
+
+// Get currency info by code
+export function getCurrencyByCode(code: CurrencyCode): CurrencyInfo {
+  return availableCurrencies.find(c => c.code === code) || availableCurrencies[0];
 }

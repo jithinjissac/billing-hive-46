@@ -28,6 +28,7 @@ export interface Invoice {
   notes?: string;
   discount?: number;
   pdfPreview?: string;
+  currency?: string;
   paymentDetails?: {
     accountHolder: string;
     bankName: string;
@@ -35,4 +36,12 @@ export interface Invoice {
     ifsc: string;
     branch: string;
   };
+}
+
+export type CurrencyCode = "INR" | "USD" | "GBP" | "AUD";
+
+export interface CurrencyInfo {
+  code: CurrencyCode;
+  symbol: string;
+  name: string;
 }

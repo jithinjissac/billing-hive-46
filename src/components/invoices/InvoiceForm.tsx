@@ -21,9 +21,10 @@ import {
   TableFooter,
 } from "@/components/ui/table";
 import { Trash, Plus } from "lucide-react";
-import { Invoice, InvoiceItem, Customer } from "@/types/invoice";
+import { Invoice, InvoiceItem, Customer, CurrencyCode } from "@/types/invoice";
 import { dummyCustomers } from "@/data/dummyData";
 import { formatCurrency } from "@/utils/formatters";
+import { getInvoiceSettings, availableCurrencies } from "@/services/settingsService";
 
 interface InvoiceFormProps {
   invoice?: Invoice;
@@ -32,6 +33,9 @@ interface InvoiceFormProps {
 }
 
 export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProps) {
+  // Get default settings
+  const defaultSettings = getInvoiceSettings();
+  
   const [customers, setCustomers] = useState<Customer[]>(dummyCustomers);
   const [invoiceNumber, setInvoiceNumber] = useState(invoice?.invoiceNumber || generateInvoiceNumber());
   const [customerId, setCustomerId] = useState(invoice?.customer.id || "");
@@ -41,7 +45,8 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
   const [items, setItems] = useState<InvoiceItem[]>(invoice?.items || [
     { id: crypto.randomUUID(), description: "", quantity: 1, price: 0 }
   ]);
-  const [notes, setNotes] = useState(invoice?.notes || "");
+  const [notes, setNotes] = useState(invoice?.notes || defaultSettings.defaultNotes);
+  const [currency, setCurrency] = useState<CurrencyCode>(invoice?.currency || defaultSettings.defaultCurrency);
   
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
@@ -53,23 +58,23 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
       return sum + (item.quantity * item.price);
     }, 0);
     
-    const calculatedTax = calculatedSubtotal * 0.1; // 10% tax
+    const calculatedTax = calculatedSubtotal * (defaultSettings.defaultTaxRate / 100);
     const calculatedTotal = calculatedSubtotal + calculatedTax;
     
     setSubtotal(calculatedSubtotal);
     setTax(calculatedTax);
     setTotal(calculatedTotal);
-  }, [items]);
+  }, [items, defaultSettings.defaultTaxRate]);
   
   function generateInvoiceNumber() {
-    const prefix = "INV";
+    const prefix = defaultSettings.invoicePrefix;
     const timestamp = Date.now().toString().slice(-6);
-    return `${prefix}-${timestamp}`;
+    return `${prefix}${timestamp}`;
   }
   
   function getDefaultDueDate() {
     const date = new Date();
-    date.setDate(date.getDate() + 30); // Default: due in 30 days
+    date.setDate(date.getDate() + defaultSettings.defaultDueDays);
     return date.toISOString().substring(0, 10);
   }
   
@@ -113,6 +118,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
       dueDate,
       status,
       items,
+      currency,
       subtotal,
       tax,
       total,
@@ -156,6 +162,25 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
               {customers.map((customer) => (
                 <SelectItem key={customer.id} value={customer.id}>
                   {customer.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="currency">Currency</Label>
+          <Select
+            value={currency}
+            onValueChange={(value) => setCurrency(value as CurrencyCode)}
+          >
+            <SelectTrigger id="currency">
+              <SelectValue placeholder="Select currency" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableCurrencies.map((currencyOption) => (
+                <SelectItem key={currencyOption.code} value={currencyOption.code}>
+                  {currencyOption.symbol} - {currencyOption.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -263,7 +288,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
                   />
                 </TableCell>
                 <TableCell>
-                  {formatCurrency(item.quantity * item.price)}
+                  {formatCurrency(item.quantity * item.price, currency)}
                 </TableCell>
                 <TableCell>
                   <Button
@@ -282,17 +307,17 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
           <TableFooter>
             <TableRow>
               <TableCell colSpan={3} className="text-right">Subtotal</TableCell>
-              <TableCell>{formatCurrency(subtotal)}</TableCell>
+              <TableCell>{formatCurrency(subtotal, currency)}</TableCell>
               <TableCell></TableCell>
             </TableRow>
             <TableRow>
-              <TableCell colSpan={3} className="text-right">Tax (10%)</TableCell>
-              <TableCell>{formatCurrency(tax)}</TableCell>
+              <TableCell colSpan={3} className="text-right">Tax ({defaultSettings.defaultTaxRate}%)</TableCell>
+              <TableCell>{formatCurrency(tax, currency)}</TableCell>
               <TableCell></TableCell>
             </TableRow>
             <TableRow>
               <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
-              <TableCell className="font-bold">{formatCurrency(total)}</TableCell>
+              <TableCell className="font-bold">{formatCurrency(total, currency)}</TableCell>
               <TableCell></TableCell>
             </TableRow>
           </TableFooter>
@@ -324,4 +349,3 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
     </form>
   );
 }
-

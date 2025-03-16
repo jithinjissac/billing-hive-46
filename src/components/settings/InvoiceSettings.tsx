@@ -7,7 +7,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { ColorPicker } from "./ColorPicker";
-import { getInvoiceSettings, updateInvoiceSettings } from "@/services/settingsService";
+import { 
+  getInvoiceSettings, 
+  updateInvoiceSettings,
+  availableCurrencies 
+} from "@/services/settingsService";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CurrencyCode } from "@/types/invoice";
 
 export function InvoiceSettings() {
   const [invoicePrefix, setInvoicePrefix] = useState("INV-");
@@ -17,6 +29,7 @@ export function InvoiceSettings() {
   const [accentColor, setAccentColor] = useState("#00BCD4");
   const [footerText, setFooterText] = useState("Logic will get you from A to B. Imagination will take you everywhere. - Albert Einstein");
   const [template, setTemplate] = useState("modern");
+  const [defaultCurrency, setDefaultCurrency] = useState<CurrencyCode>("INR");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Load settings on component mount
@@ -29,6 +42,7 @@ export function InvoiceSettings() {
     setAccentColor(settings.accentColor);
     setFooterText(settings.footerText);
     setTemplate(settings.template);
+    setDefaultCurrency(settings.defaultCurrency || "INR");
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,7 +58,8 @@ export function InvoiceSettings() {
         defaultNotes,
         accentColor,
         footerText,
-        template
+        template,
+        defaultCurrency
       });
       
       toast.success("Invoice settings updated successfully");
@@ -90,6 +105,25 @@ export function InvoiceSettings() {
               value={defaultTaxRate}
               onChange={(e) => setDefaultTaxRate(e.target.value)}
             />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="defaultCurrency">Default Currency</Label>
+            <Select
+              value={defaultCurrency}
+              onValueChange={(value) => setDefaultCurrency(value as CurrencyCode)}
+            >
+              <SelectTrigger id="defaultCurrency">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCurrencies.map((currency) => (
+                  <SelectItem key={currency.code} value={currency.code}>
+                    {currency.symbol} - {currency.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">

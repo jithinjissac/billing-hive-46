@@ -20,6 +20,34 @@ const InvoiceView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
   const [pdfPreview, setPdfPreview] = useState<string | undefined>(undefined);
+  const [companySettings, setCompanySettings] = useState(getCompanySettings());
+  
+  // Listen for settings changes
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setCompanySettings(getCompanySettings());
+      
+      // Regenerate PDF preview if invoice exists
+      if (invoice) {
+        generatePdfPreview(invoice);
+      }
+    };
+    
+    window.addEventListener('settings-updated', handleSettingsUpdate);
+    return () => {
+      window.removeEventListener('settings-updated', handleSettingsUpdate);
+    };
+  }, [invoice]);
+  
+  // Generate PDF preview without downloading
+  const generatePdfPreview = async (invoiceData: Invoice) => {
+    try {
+      const preview = await generatePDF(invoiceData, false);
+      setPdfPreview(preview);
+    } catch (error) {
+      console.error("Error generating PDF preview:", error);
+    }
+  };
   
   useEffect(() => {
     // In a real app, this would be an API call
@@ -34,9 +62,8 @@ const InvoiceView = () => {
         if (foundInvoice) {
           setInvoice(foundInvoice);
           
-          // Generate PDF preview
-          const preview = await generatePDF(foundInvoice);
-          setPdfPreview(preview);
+          // Generate PDF preview without download
+          await generatePdfPreview(foundInvoice);
         } else {
           toast.error("Invoice not found");
           navigate("/invoices");
@@ -56,7 +83,7 @@ const InvoiceView = () => {
     if (!invoice) return;
     
     try {
-      await generatePDF(invoice);
+      await generatePDF(invoice, true); // true to trigger download
       toast.success("Invoice downloaded successfully");
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -135,7 +162,7 @@ const InvoiceView = () => {
             <CardContent className="p-6">
               <InvoiceDetails 
                 invoice={invoice} 
-                companySettings={getCompanySettings()}
+                companySettings={companySettings}
               />
             </CardContent>
           </Card>

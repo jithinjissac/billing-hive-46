@@ -1,14 +1,29 @@
 
+import { CurrencyCode } from "@/types/invoice";
+import { getCurrencyByCode } from "@/services/settingsService";
+
 /**
- * Format a number as currency in INR format
+ * Format a number as currency based on provided currency code
  */
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
+export function formatCurrency(amount: number, currencyCode: CurrencyCode = "INR"): string {
+  const currency = getCurrencyByCode(currencyCode);
+  
+  const options: Intl.NumberFormatOptions = {
     style: 'currency',
-    currency: 'INR',
+    currency: currencyCode,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount).replace("₹", "₹ "); // Add space after ₹ symbol to match design
+  };
+  
+  // Handle special cases for better formatting
+  let formatted = new Intl.NumberFormat('en-US', options).format(amount);
+  
+  // For Indian Rupee, replace with the proper symbol and add space
+  if (currencyCode === 'INR') {
+    formatted = formatted.replace(/\$|₹/g, "₹ ");
+  }
+  
+  return formatted;
 }
 
 /**
@@ -27,7 +42,7 @@ export function formatDate(dateString: string): string {
 /**
  * Convert a number to words for Indian Rupees
  */
-export function convertNumberToWords(num: number): string {
+export function convertNumberToWords(num: number, currencyCode: CurrencyCode = "INR"): string {
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
   
@@ -42,23 +57,43 @@ export function convertNumberToWords(num: number): string {
   }
   
   let result = '';
-  const crore = Math.floor(num / 10000000);
-  const lakh = Math.floor((num % 10000000) / 100000);
-  const thousand = Math.floor((num % 100000) / 1000);
-  const remaining = num % 1000;
   
-  if (crore > 0) {
-    result += convertLessThanOneThousand(crore) + ' Crore ';
-  }
-  if (lakh > 0) {
-    result += convertLessThanOneThousand(lakh) + ' Lakh ';
-  }
-  if (thousand > 0) {
-    result += convertLessThanOneThousand(thousand) + ' Thousand ';
-  }
-  if (remaining > 0) {
-    result += convertLessThanOneThousand(remaining);
+  // Handle different currencies differently
+  if (currencyCode === "INR") {
+    const crore = Math.floor(num / 10000000);
+    const lakh = Math.floor((num % 10000000) / 100000);
+    const thousand = Math.floor((num % 100000) / 1000);
+    const remaining = num % 1000;
+    
+    if (crore > 0) {
+      result += convertLessThanOneThousand(crore) + ' Crore ';
+    }
+    if (lakh > 0) {
+      result += convertLessThanOneThousand(lakh) + ' Lakh ';
+    }
+    if (thousand > 0) {
+      result += convertLessThanOneThousand(thousand) + ' Thousand ';
+    }
+    if (remaining > 0) {
+      result += convertLessThanOneThousand(remaining);
+    }
+  } else {
+    // For non-INR currencies, use standard millions notation
+    const million = Math.floor(num / 1000000);
+    const thousand = Math.floor((num % 1000000) / 1000);
+    const remaining = num % 1000;
+    
+    if (million > 0) {
+      result += convertLessThanOneThousand(million) + ' Million ';
+    }
+    if (thousand > 0) {
+      result += convertLessThanOneThousand(thousand) + ' Thousand ';
+    }
+    if (remaining > 0) {
+      result += convertLessThanOneThousand(remaining);
+    }
   }
   
-  return result.trim() + ' Only';
+  const currency = getCurrencyByCode(currencyCode);
+  return result.trim() + ' ' + currency.name + ' Only';
 }
