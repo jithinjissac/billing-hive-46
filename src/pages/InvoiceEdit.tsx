@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoiceForm } from "@/components/invoices/InvoiceForm";
 import { Invoice } from "@/types/invoice";
@@ -14,6 +14,7 @@ const InvoiceEdit = () => {
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -131,6 +132,115 @@ const InvoiceEdit = () => {
     fetchInvoice();
   }, [id, navigate]);
   
+  const handleSubmit = async (updatedInvoice: Invoice) => {
+    if (!id) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Update invoice in Supabase
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .update({
+          invoice_number: updatedInvoice.invoiceNumber,
+          customer_id: updatedInvoice.customer.id,
+          date: updatedInvoice.date,
+          due_date: updatedInvoice.dueDate,
+          status: updatedInvoice.status,
+          subtotal: updatedInvoice.subtotal,
+          tax: updatedInvoice.tax,
+          total: updatedInvoice.total,
+          notes: updatedInvoice.notes,
+          currency: updatedInvoice.currency,
+          discount: updatedInvoice.discount || 0
+        })
+        .eq('id', id);
+      
+      if (invoiceError) {
+        console.error("Error updating invoice:", invoiceError);
+        toast.error("Failed to update invoice");
+        return;
+      }
+      
+      // Delete old invoice items
+      const { error: deleteItemsError } = await supabase
+        .from('invoice_items')
+        .delete()
+        .eq('invoice_id', id);
+      
+      if (deleteItemsError) {
+        console.error("Error deleting invoice items:", deleteItemsError);
+        toast.error("Failed to update invoice items");
+        return;
+      }
+      
+      // Insert new invoice items
+      for (const item of updatedInvoice.items) {
+        const { data: newItem, error: itemError } = await supabase
+          .from('invoice_items')
+          .insert({
+            invoice_id: id,
+            description: item.description,
+            quantity: item.quantity,
+            price: item.price
+          })
+          .select()
+          .single();
+        
+        if (itemError) {
+          console.error("Error inserting invoice item:", itemError);
+          toast.error("Failed to update invoice items");
+          return;
+        }
+        
+        // Insert specs if any
+        if (item.specs && item.specs.length > 0 && newItem) {
+          const specsToInsert = item.specs.map(spec => ({
+            item_id: newItem.id,
+            spec_text: spec
+          }));
+          
+          const { error: specsError } = await supabase
+            .from('item_specs')
+            .insert(specsToInsert);
+          
+          if (specsError) {
+            console.error("Error inserting item specs:", specsError);
+          }
+        }
+      }
+      
+      // Update payment details if provided
+      if (updatedInvoice.paymentDetails) {
+        const { error: paymentError } = await supabase
+          .from('payment_details')
+          .upsert({
+            invoice_id: id,
+            account_holder: updatedInvoice.paymentDetails.accountHolder,
+            bank_name: updatedInvoice.paymentDetails.bankName,
+            account_number: updatedInvoice.paymentDetails.accountNumber,
+            ifsc: updatedInvoice.paymentDetails.ifsc,
+            branch: updatedInvoice.paymentDetails.branch
+          });
+        
+        if (paymentError) {
+          console.error("Error updating payment details:", paymentError);
+          toast.error("Failed to update payment details");
+          return;
+        }
+      }
+      
+      toast.success("Invoice updated successfully");
+      navigate(`/invoices/${id}`);
+      
+    } catch (error) {
+      console.error("Error updating invoice:", error);
+      toast.error("Failed to update invoice");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
   const handleSaveSuccess = (invoiceId: string) => {
     toast.success("Invoice updated successfully");
     navigate(`/invoices/${invoiceId}`);
@@ -175,6 +285,8 @@ const InvoiceEdit = () => {
       <InvoiceForm 
         editMode={true}
         initialInvoice={invoice}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
         onSaveSuccess={handleSaveSuccess}
       />
     </DashboardLayout>

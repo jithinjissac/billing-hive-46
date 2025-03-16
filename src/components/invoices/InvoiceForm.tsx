@@ -33,25 +33,31 @@ interface InvoiceFormProps {
   invoice?: Invoice;
   onSubmit: (invoice: Invoice) => void;
   isSubmitting: boolean;
+  editMode?: boolean;
+  initialInvoice?: Invoice;
+  onSaveSuccess?: (invoiceId: string) => void;
 }
 
-export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProps) {
+export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false, initialInvoice, onSaveSuccess }: InvoiceFormProps) {
   // Get default settings
   const defaultSettings = getInvoiceSettings();
   
+  // Use initialInvoice if provided (for edit mode), otherwise fallback to invoice
+  const invoiceData = initialInvoice || invoice;
+  
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [invoiceNumber, setInvoiceNumber] = useState(invoice?.invoiceNumber || generateInvoiceNumber());
-  const [customerId, setCustomerId] = useState(invoice?.customer?.id || "");
-  const [date, setDate] = useState(invoice?.date || new Date().toISOString().substring(0, 10));
-  const [dueDate, setDueDate] = useState(invoice?.dueDate || getDefaultDueDate());
-  const [status, setStatus] = useState<"draft" | "pending" | "paid" | "overdue">(invoice?.status || "pending");
-  const [items, setItems] = useState<InvoiceItem[]>(invoice?.items || [
+  const [invoiceNumber, setInvoiceNumber] = useState(invoiceData?.invoiceNumber || generateInvoiceNumber());
+  const [customerId, setCustomerId] = useState(invoiceData?.customer?.id || "");
+  const [date, setDate] = useState(invoiceData?.date || new Date().toISOString().substring(0, 10));
+  const [dueDate, setDueDate] = useState(invoiceData?.dueDate || getDefaultDueDate());
+  const [status, setStatus] = useState<"draft" | "pending" | "paid" | "overdue">(invoiceData?.status || "pending");
+  const [items, setItems] = useState<InvoiceItem[]>(invoiceData?.items || [
     { id: crypto.randomUUID(), description: "", quantity: 1, price: 0 }
   ]);
-  const [notes, setNotes] = useState(invoice?.notes || defaultSettings.defaultNotes);
-  const [currency, setCurrency] = useState<CurrencyCode>(invoice?.currency as CurrencyCode || defaultSettings.defaultCurrency);
-  const [discount, setDiscount] = useState(invoice?.discount || 0);
-  const [isTaxEnabled, setIsTaxEnabled] = useState(invoice?.isTaxEnabled === true);
+  const [notes, setNotes] = useState(invoiceData?.notes || defaultSettings.defaultNotes);
+  const [currency, setCurrency] = useState<CurrencyCode>(invoiceData?.currency as CurrencyCode || defaultSettings.defaultCurrency);
+  const [discount, setDiscount] = useState(invoiceData?.discount || 0);
+  const [isTaxEnabled, setIsTaxEnabled] = useState(invoiceData?.isTaxEnabled === true);
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   
   const [subtotal, setSubtotal] = useState(0);
@@ -63,7 +69,6 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
     fetchCustomers();
   }, []);
   
-  // Calculate totals when items change
   useEffect(() => {
     const calculatedSubtotal = items.reduce((sum, item) => {
       return sum + (item.quantity * item.price);
@@ -201,8 +206,8 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
       return;
     }
     
-    const invoiceData: Invoice = {
-      id: invoice?.id || crypto.randomUUID(),
+    const finalInvoiceData: Invoice = {
+      id: invoiceData?.id || crypto.randomUUID(),
       invoiceNumber,
       customer: selectedCustomer,
       date,
@@ -218,10 +223,14 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
       isTaxEnabled
     };
     
-    onSubmit(invoiceData);
+    onSubmit(finalInvoiceData);
+    
+    // If in edit mode and onSaveSuccess is provided, call it with the invoice ID
+    if (editMode && onSaveSuccess && finalInvoiceData.id) {
+      onSaveSuccess(finalInvoiceData.id);
+    }
   };
   
-  // Type guard to ensure value is a valid status
   const handleStatusChange = (value: string) => {
     if (value === "draft" || value === "pending" || value === "paid" || value === "overdue") {
       setStatus(value);

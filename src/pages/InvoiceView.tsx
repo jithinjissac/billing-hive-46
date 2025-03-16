@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Printer, Download, ArrowLeft, Edit, Eye, Check } from "lucide-react";
+import { Printer, Download, ArrowLeft, Edit, Eye } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoiceDetails } from "@/components/invoices/InvoiceDetails";
 import { generatePDF } from "@/utils/pdf";
@@ -227,6 +227,12 @@ const InvoiceView = () => {
   const handleStatusChange = async (newStatus: string) => {
     if (!invoice || !id) return;
     
+    // Validate the status is of the correct type
+    if (newStatus !== 'draft' && newStatus !== 'pending' && newStatus !== 'paid' && newStatus !== 'overdue' && newStatus !== 'cancelled') {
+      toast.error("Invalid status value");
+      return;
+    }
+    
     try {
       setIsUpdatingStatus(true);
       
@@ -242,12 +248,16 @@ const InvoiceView = () => {
         return;
       }
       
-      // Update the local invoice object
+      // Update the local invoice object with correct typing
       setInvoice(prev => {
         if (!prev) return null;
+        
+        // Use type assertion to handle the status typing
+        const updatedStatus = newStatus as "draft" | "pending" | "paid" | "overdue";
+        
         return {
           ...prev,
-          status: newStatus
+          status: updatedStatus
         };
       });
       
