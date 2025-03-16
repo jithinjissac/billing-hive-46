@@ -7,7 +7,6 @@ import { Printer, Download, ArrowLeft, Edit, Eye } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoiceDetails } from "@/components/invoices/InvoiceDetails";
 import { generatePDF } from "@/utils/pdf";
-import { dummyInvoices } from "@/data/dummyData";
 import { Invoice } from "@/types/invoice";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,24 +50,113 @@ const InvoiceView = () => {
   };
   
   useEffect(() => {
-    // In a real app, this would be an API call
     const fetchInvoice = async () => {
       try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        setIsLoading(true);
         
-        // Find invoice in dummy data
-        const foundInvoice = dummyInvoices.find(inv => inv.id === id);
+        if (!id) {
+          toast.error("Invoice ID not provided");
+          navigate("/invoices");
+          return;
+        }
         
-        if (foundInvoice) {
-          setInvoice(foundInvoice);
-          
-          // Generate PDF preview without download
-          await generatePdfPreview(foundInvoice);
-        } else {
+        // Fetch invoice from Supabase
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (invoiceError) {
+          console.error("Error fetching invoice:", invoiceError);
+          toast.error("Failed to load invoice");
+          navigate("/invoices");
+          return;
+        }
+        
+        if (!invoiceData) {
           toast.error("Invoice not found");
           navigate("/invoices");
+          return;
         }
+        
+        // Fetch customer
+        const { data: customerData, error: customerError } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', invoiceData.customer_id)
+          .single();
+        
+        if (customerError) {
+          console.error("Error fetching customer:", customerError);
+          toast.error("Failed to load customer data");
+          return;
+        }
+        
+        // Fetch invoice items
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('invoice_items')
+          .select('*, item_specs(*)')
+          .eq('invoice_id', id);
+        
+        if (itemsError) {
+          console.error("Error fetching invoice items:", itemsError);
+          toast.error("Failed to load invoice items");
+          return;
+        }
+        
+        // Fetch payment details
+        const { data: paymentData } = await supabase
+          .from('payment_details')
+          .select('*')
+          .eq('invoice_id', id)
+          .maybeSingle();
+        
+        // Format items
+        const items = itemsData.map(item => {
+          const specs = item.item_specs?.map(spec => spec.spec_text) || [];
+          return {
+            id: item.id,
+            description: item.description,
+            quantity: item.quantity,
+            price: Number(item.price),
+            specs
+          };
+        });
+        
+        // Construct the full invoice object for our app
+        const fullInvoice: Invoice = {
+          id: invoiceData.id,
+          invoiceNumber: invoiceData.invoice_number,
+          customer: {
+            id: customerData.id,
+            name: customerData.name,
+            email: customerData.email || '',
+            phone: customerData.phone || '',
+            address: customerData.address || '',
+          },
+          date: invoiceData.date,
+          dueDate: invoiceData.due_date,
+          status: invoiceData.status,
+          items: items,
+          subtotal: Number(invoiceData.subtotal),
+          tax: Number(invoiceData.tax),
+          total: Number(invoiceData.total),
+          notes: invoiceData.notes || '',
+          currency: invoiceData.currency,
+          paymentDetails: paymentData ? {
+            accountHolder: paymentData.account_holder,
+            bankName: paymentData.bank_name,
+            accountNumber: paymentData.account_number,
+            ifsc: paymentData.ifsc,
+            branch: paymentData.branch,
+          } : undefined
+        };
+        
+        setInvoice(fullInvoice);
+        
+        // Generate PDF preview
+        await generatePdfPreview(fullInvoice);
       } catch (error) {
         console.error("Error fetching invoice:", error);
         toast.error("Failed to load invoice");

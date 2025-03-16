@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { InvoiceForm } from "@/components/invoices/InvoiceForm";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Invoice } from "@/types/invoice";
+import { supabase } from "@/integrations/supabase/client";
 
 const InvoiceCreate = () => {
   const navigate = useNavigate();
@@ -16,11 +17,62 @@ const InvoiceCreate = () => {
     setIsSubmitting(true);
     
     try {
-      // In a real app, we would send the data to an API
       console.log("Creating invoice:", invoice);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // First, insert the invoice record
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          id: invoice.id,
+          invoice_number: invoice.invoiceNumber,
+          customer_id: invoice.customer.id,
+          date: invoice.date,
+          due_date: invoice.dueDate,
+          status: invoice.status,
+          subtotal: invoice.subtotal,
+          tax: invoice.tax,
+          total: invoice.total,
+          notes: invoice.notes,
+          currency: invoice.currency
+        })
+        .select()
+        .single();
+        
+      if (invoiceError) {
+        console.error("Error creating invoice:", invoiceError);
+        toast.error("Failed to create invoice");
+        return;
+      }
+      
+      // Then insert all invoice items
+      const itemsToInsert = invoice.items.map(item => ({
+        invoice_id: invoice.id,
+        description: item.description,
+        quantity: item.quantity,
+        price: item.price
+      }));
+      
+      const { error: itemsError } = await supabase
+        .from('invoice_items')
+        .insert(itemsToInsert);
+        
+      if (itemsError) {
+        console.error("Error creating invoice items:", itemsError);
+        toast.error("Failed to create invoice items");
+        return;
+      }
+      
+      // Create payment details if not existing
+      const { error: paymentError } = await supabase
+        .from('payment_details')
+        .insert({
+          invoice_id: invoice.id
+        });
+        
+      if (paymentError) {
+        console.error("Error creating payment details:", paymentError);
+        // Not critical, so just log, don't show error to user
+      }
       
       toast.success("Invoice created successfully!", {
         description: `Invoice #${invoice.invoiceNumber} has been created.`,

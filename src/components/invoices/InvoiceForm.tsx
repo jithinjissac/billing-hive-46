@@ -22,9 +22,10 @@ import {
 } from "@/components/ui/table";
 import { Trash, Plus } from "lucide-react";
 import { Invoice, InvoiceItem, Customer, CurrencyCode } from "@/types/invoice";
-import { dummyCustomers } from "@/data/dummyData";
 import { formatCurrency } from "@/utils/formatters";
 import { getInvoiceSettings, availableCurrencies } from "@/services/settingsService";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface InvoiceFormProps {
   invoice?: Invoice;
@@ -36,7 +37,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
   // Get default settings
   const defaultSettings = getInvoiceSettings();
   
-  const [customers, setCustomers] = useState<Customer[]>(dummyCustomers);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState(invoice?.invoiceNumber || generateInvoiceNumber());
   const [customerId, setCustomerId] = useState(invoice?.customer.id || "");
   const [date, setDate] = useState(invoice?.date || new Date().toISOString().substring(0, 10));
@@ -46,11 +47,16 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
     { id: crypto.randomUUID(), description: "", quantity: 1, price: 0 }
   ]);
   const [notes, setNotes] = useState(invoice?.notes || defaultSettings.defaultNotes);
-  const [currency, setCurrency] = useState<CurrencyCode>(invoice?.currency || defaultSettings.defaultCurrency);
+  const [currency, setCurrency] = useState<CurrencyCode>(invoice?.currency as CurrencyCode || defaultSettings.defaultCurrency);
   
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
+  
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
   
   // Calculate totals when items change
   useEffect(() => {
@@ -65,6 +71,44 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
     setTax(calculatedTax);
     setTotal(calculatedTotal);
   }, [items, defaultSettings.defaultTaxRate]);
+  
+  const fetchCustomers = async () => {
+    try {
+      setIsLoadingCustomers(true);
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('name', { ascending: true });
+        
+      if (error) {
+        console.error("Error fetching customers:", error);
+        toast.error("Failed to load customers");
+        return;
+      }
+      
+      if (data) {
+        const formattedCustomers = data.map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email || '',
+          phone: c.phone || '',
+          address: c.address || '',
+        }));
+        
+        setCustomers(formattedCustomers);
+        
+        // If we have customers and no customerId is selected, select the first one
+        if (formattedCustomers.length > 0 && !customerId) {
+          setCustomerId(formattedCustomers[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      toast.error("Failed to load customers");
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  };
   
   function generateInvoiceNumber() {
     const prefix = defaultSettings.invoicePrefix;
@@ -106,7 +150,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
     const selectedCustomer = customers.find(c => c.id === customerId);
     
     if (!selectedCustomer) {
-      alert("Please select a customer");
+      toast.error("Please select a customer");
       return;
     }
     
@@ -118,7 +162,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
       dueDate,
       status,
       items,
-      currency,
+      currency: currency as CurrencyCode,
       subtotal,
       tax,
       total,
@@ -153,17 +197,24 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
           <Select
             value={customerId}
             onValueChange={setCustomerId}
+            disabled={isLoadingCustomers}
             required
           >
             <SelectTrigger id="customer">
-              <SelectValue placeholder="Select customer" />
+              <SelectValue placeholder={isLoadingCustomers ? "Loading customers..." : "Select customer"} />
             </SelectTrigger>
             <SelectContent>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name}
+              {customers.length === 0 ? (
+                <SelectItem value="no-customers" disabled>
+                  No customers found
                 </SelectItem>
-              ))}
+              ) : (
+                customers.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
