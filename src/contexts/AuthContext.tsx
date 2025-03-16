@@ -59,11 +59,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     initStorageBucket();
   }, []);
   
-  // Memoize the fetchProfile function to prevent unnecessary re-renders
   const fetchProfile = useCallback(async (userId: string) => {
     try {
-      if (!userId) return;
-      
       console.log(`Fetching profile for user: ${userId}`);
       
       const { data: existingProfile, error: fetchError } = await supabase
@@ -85,17 +82,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // If profile doesn't exist, create it
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert([
-            { 
-              id: userId,
-              first_name: null,
-              last_name: null,
-              phone: null,
-              address: null,
-              position: null,
-              profile_picture_url: null
-            }
-          ])
+          .insert([{ id: userId }])
           .select()
           .single();
 
@@ -116,21 +103,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const refreshSession = useCallback(async () => {
     try {
       console.log("Refreshing session...");
-      setIsLoading(true);
-      const start = performance.now();
-      
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
-      const end = performance.now();
-      console.log(`Session refresh completed in ${end - start}ms`);
       
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-
-        if (currentSession.user) {
-          await fetchProfile(currentSession.user.id);
-        }
+        await fetchProfile(currentSession.user.id);
       } else {
         setSession(null);
         setUser(null);
@@ -141,8 +119,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (error) {
       console.error("Error refreshing session:", error);
       return null;
-    } finally {
-      setIsLoading(false);
     }
   }, [fetchProfile]);
 
@@ -161,8 +137,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           id: user.id,
           ...profileData,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+        });
 
       if (error) {
         console.error("Error updating profile:", error);
@@ -170,7 +145,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
-      // Fetch the updated profile
       await fetchProfile(user.id);
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -180,71 +154,50 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [user, fetchProfile]);
 
   useEffect(() => {
-    // Get initial session - only once
     const initializeAuth = async () => {
       if (authInitialized) return;
       
       try {
         console.log("Initializing auth...");
-        const start = performance.now();
-        
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        const end = performance.now();
-        console.log(`Auth initialization completed in ${end - start}ms`);
         
         if (initialSession) {
           setSession(initialSession);
           setUser(initialSession.user);
-
-          if (initialSession.user) {
-            await fetchProfile(initialSession.user.id);
-          }
+          await fetchProfile(initialSession.user.id);
         }
-        
-        setAuthInitialized(true);
-        setIsLoading(false);
       } catch (error) {
-        console.error("Error getting session:", error);
+        console.error("Error initializing auth:", error);
+      } finally {
+        setAuthInitialized(true);
         setIsLoading(false);
       }
     };
 
     initializeAuth();
 
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log("Auth state change:", event);
-        
-        if (newSession) {
-          setSession(newSession);
-          setUser(newSession.user);
-          
-          if (newSession.user) {
-            await fetchProfile(newSession.user.id);
-          }
-        } else {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-        }
-        
-        setIsLoading(false);
-        setAuthInitialized(true);
-        
-        // Show appropriate toast messages based on auth events
-        if (event === 'SIGNED_IN') {
-          toast.success("Signed in successfully");
-        } else if (event === 'SIGNED_OUT') {
-          toast.success("Signed out successfully");
-        } else if (event === 'PASSWORD_RECOVERY') {
-          toast.info("Password recovery initiated");
-        } else if (event === 'USER_UPDATED') {
-          toast.success("User profile updated");
-        }
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log("Auth state change:", event);
+      
+      if (newSession) {
+        setSession(newSession);
+        setUser(newSession.user);
+        await fetchProfile(newSession.user.id);
+      } else {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       }
-    );
+      
+      setIsLoading(false);
+      setAuthInitialized(true);
+      
+      if (event === 'SIGNED_IN') {
+        toast.success("Signed in successfully");
+      } else if (event === 'SIGNED_OUT') {
+        toast.success("Signed out successfully");
+      }
+    });
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -254,24 +207,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signOut = useCallback(async () => {
     try {
       console.log("Signing out...");
-      setIsLoading(true);
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
-  // Update the profile whenever the user changes
-  useEffect(() => {
-    if (user?.id) {
-      fetchProfile(user.id);
-    }
-  }, [user?.id, fetchProfile]);
-
-  // Memoize the context value to prevent unnecessary rerenders
   const value = useMemo(() => ({
     session,
     user,
