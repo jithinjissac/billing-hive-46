@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -215,7 +216,7 @@ export function InvoiceDetails({
         <div className="payment-details text-sm">
           <h3 className="underline font-bold mb-2">Payment Account Details</h3>
           <p className="mb-1">
-            Account Holder: {invoice.paymentDetails?.accountHolder || "Jithin Jacob Issac"}<br />
+            Account Holder: {invoice.paymentDetails?.accountHolder || "Jithin Jacob Issic"}<br />
             Bank Name: {invoice.paymentDetails?.bankName || "Federal Bank"}<br />
             Account Number: {invoice.paymentDetails?.accountNumber || "99980111697400"}<br />
             IFSC: {invoice.paymentDetails?.ifsc || "FDRL0001443"}<br />

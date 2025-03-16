@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 import { SectionPositions } from "./types";
 import { Invoice, CurrencyCode } from "@/types/invoice";

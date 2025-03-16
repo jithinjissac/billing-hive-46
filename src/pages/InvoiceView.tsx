@@ -133,6 +133,8 @@ const InvoiceView = () => {
         
         let status = invoiceData.status as "draft" | "pending" | "paid" | "overdue";
         
+        console.log("Notes from DB:", invoiceData.notes);
+        
         const fullInvoice: Invoice = {
           id: invoiceData.id,
           invoiceNumber: invoiceData.invoice_number,
@@ -152,6 +154,7 @@ const InvoiceView = () => {
           total: Number(invoiceData.total),
           notes: invoiceData.notes || '',
           currency: invoiceData.currency,
+          discount: Number(invoiceData.discount || 0),
           paymentDetails: paymentData ? {
             accountHolder: paymentData.account_holder,
             bankName: paymentData.bank_name,
@@ -160,6 +163,8 @@ const InvoiceView = () => {
             branch: paymentData.branch,
           } : undefined
         };
+        
+        console.log("Loaded invoice:", JSON.stringify(fullInvoice, null, 2));
         
         setInvoice(fullInvoice);
         
