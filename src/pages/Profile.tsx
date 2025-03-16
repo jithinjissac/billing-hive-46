@@ -1,4 +1,3 @@
-
 import { useState, useEffect, ChangeEvent, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -90,31 +89,26 @@ const Profile = () => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
-      // Upload the file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data } = await supabase.storage
         .from('profile-pictures')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: true
         });
       
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
       
-      // Get the public URL of the uploaded file
-      const { data: urlData } = supabase.storage
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
         .from('profile-pictures')
         .getPublicUrl(fileName);
       
-      if (urlData) {
-        // Update the profile with the new image URL
-        await updateProfile({
-          profile_picture_url: urlData.publicUrl
-        });
-        
-        toast.success("Profile picture updated successfully");
-      }
+      // Update profile with new image URL
+      await updateProfile({
+        profile_picture_url: publicUrl
+      });
+      
+      toast.success("Profile picture updated successfully");
     } catch (error) {
       console.error("Error uploading profile picture:", error);
       toast.error("Failed to upload profile picture");

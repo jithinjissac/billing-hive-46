@@ -65,7 +65,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (!userId) return;
       
       console.log(`Fetching profile for user: ${userId}`);
-      const start = performance.now();
       
       const { data, error } = await supabase
         .from('profiles')
@@ -73,35 +72,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .eq('id', userId)
         .maybeSingle();
 
-      const end = performance.now();
-      console.log(`Profile fetch completed in ${end - start}ms`);
-
       if (error) {
         console.error("Error fetching profile:", error);
+        toast.error("Failed to fetch profile");
         return;
       }
 
       if (data) {
+        console.log("Profile data fetched:", data);
         setProfile(data);
-        console.log("Profile data set:", data);
       } else {
-        console.log("No profile found for user:", userId);
-        // Create an empty profile if none exists
-        const { error: insertError } = await supabase
+        console.log("Creating new profile for user:", userId);
+        const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert({ id: userId })
+          .insert([{ id: userId }])
           .select()
           .single();
           
         if (insertError) {
           console.error("Error creating profile:", insertError);
-        } else {
-          // Fetch the profile again after creating it
-          await fetchProfile(userId);
+          toast.error("Failed to create profile");
+        } else if (newProfile) {
+          setProfile(newProfile);
         }
       }
     } catch (error) {
       console.error("Error in fetchProfile:", error);
+      toast.error("An error occurred while fetching profile");
     }
   }, []);
 
@@ -146,15 +143,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     try {
       console.log("Updating profile with data:", profileData);
-      const start = performance.now();
       
       const { error } = await supabase
         .from('profiles')
         .update(profileData)
         .eq('id', user.id);
-
-      const end = performance.now();
-      console.log(`Profile update completed in ${end - start}ms`);
 
       if (error) {
         console.error("Error updating profile:", error);
@@ -162,12 +155,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
-      // Refresh the profile data
       await fetchProfile(user.id);
       toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error in updateProfile:", error);
-      toast.error("An unexpected error occurred");
+      toast.error("An error occurred while updating profile");
     }
   }, [user, fetchProfile]);
 
