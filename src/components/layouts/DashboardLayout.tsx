@@ -15,7 +15,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isMobile = useIsMobile();
   const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, profile } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -47,7 +47,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
-              <Sidebar showCloseButton={true} onClose={closeSidebar} />
+              <Sidebar 
+                showCloseButton={true} 
+                onClose={closeSidebar} 
+                userProfile={profile}
+              />
             </SheetContent>
           </Sheet>
         </div>
@@ -60,7 +64,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+      <Sidebar userProfile={profile} />
       <main className="flex-1 overflow-auto p-4 sm:p-6">
         <div className="container mx-auto">
           {children}

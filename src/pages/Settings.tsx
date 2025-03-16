@@ -5,13 +5,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CompanySettings } from "@/components/settings/CompanySettings";
 import { InvoiceSettings } from "@/components/settings/InvoiceSettings";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import UpdateAuthSettings from "@/components/auth/UpdateAuthSettings";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Settings = () => {
+  const { user } = useAuth();
+  
   return (
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">TechiusPay Settings</h1>
       </div>
+      
+      {/* Only show to admin users */}
+      {user && <UpdateAuthSettings />}
       
       <Tabs defaultValue="company" className="space-y-4">
         <div className="overflow-x-auto">

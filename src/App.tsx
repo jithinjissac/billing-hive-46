@@ -9,6 +9,7 @@ import InvoiceEdit from "./pages/InvoiceEdit";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 import SignUp from "./pages/auth/SignUp";
@@ -16,7 +17,7 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import UpdatePassword from "./pages/auth/UpdatePassword";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-import { Toaster } from "./components/ui/toaster";
+import { Toaster } from "sonner";
 
 function App() {
   return (
@@ -71,12 +72,17 @@ function App() {
               <Settings />
             </ProtectedRoute>
           } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
           
           {/* 404 route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
-      <Toaster />
+      <Toaster position="top-right" richColors />
     </AuthProvider>
   );
 }
