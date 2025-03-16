@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 import { SectionPositions } from "./types";
 import { Invoice, CurrencyCode } from "@/types/invoice";
@@ -21,14 +22,23 @@ export function addHeaderSection(
   doc.setDrawColor(221, 221, 221); // #ddd
   doc.setLineWidth(0.5);
   
+  // Get logo URL with fallback
+  const logoUrl = companySettings.logo || companySettings.logo_url || "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+  
   // Add company logo with bigger size
   try {
-    doc.addImage(companySettings.logo || companySettings.logo_url || "/placeholder.svg", 'JPEG', margin, 15, 50, 20);
+    doc.addImage(logoUrl, 'JPEG', margin, 15, 50, 20);
     doc.setFontSize(10);
     doc.setTextColor(85, 85, 85); // #555
     doc.text(companySettings.slogan, margin, 40);
   } catch (error) {
     console.error("Could not add logo image:", error);
+    // Try with placeholder
+    try {
+      doc.addImage("/placeholder.svg", 'JPEG', margin, 15, 50, 20);
+    } catch (e) {
+      console.error("Could not add placeholder image either:", e);
+    }
   }
   
   // Add company details on the right
@@ -96,7 +106,7 @@ export function addClientSection(
   invoice: Invoice,
   positions: SectionPositions
 ): void {
-  const { margin } = positions;
+  const { margin, pageWidth } = positions;
   
   // Add the "BILL TO" label with teal background
   doc.setFillColor(0, 179, 179); // #00b3b3
@@ -110,16 +120,18 @@ export function addClientSection(
   doc.setFontSize(10);
   
   // Split address into lines and add them
-  const clientInfo = `${invoice.customer.name}\n${invoice.customer.address}`;
-  const clientInfoLines = clientInfo.split('\n');
+  const clientInfoLines = invoice.customer.address.split(',');
+  
+  // Add the customer name first
+  doc.text(invoice.customer.name, margin, 85);
   
   // Add each line of the address
   clientInfoLines.forEach((line, i) => {
-    doc.text(line, margin, 85 + (i * 5));
+    doc.text(line.trim(), margin, 90 + (i * 5));
   });
   
   // Add border line after client details
-  doc.line(margin, 105, positions.pageWidth - margin, 105);
+  doc.line(margin, 105, pageWidth - margin, 105);
 }
 
 /**
@@ -190,7 +202,7 @@ export function addInvoiceTable(
     // Amount (third column) - properly right aligned
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
-    const amount = `${currencySymbol} ${(item.quantity * item.price).toLocaleString('en-IN')}`;
+    const amount = formatCurrency(item.quantity * item.price, invoice.currency as CurrencyCode);
     
     // Properly align the amount to the right
     doc.text(amount, pageWidth - margin - 5, y + (i * 30), { align: "right" });
@@ -207,9 +219,11 @@ export function addInvoiceTable(
   
   // Add the subtotal row
   doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
   doc.text("SUB TOTAL", margin + 5, itemsEndY);
-  const subtotalAmount = `${currencySymbol} ${invoice.subtotal.toLocaleString('en-IN')}`;
+  const subtotalAmount = formatCurrency(invoice.subtotal, invoice.currency as CurrencyCode);
   doc.text(subtotalAmount, pageWidth - margin - 5, itemsEndY, { align: "right" });
+  doc.setFont("helvetica", "normal");
   
   // Add border line after subtotal
   doc.line(margin, itemsEndY + 5, pageWidth - margin, itemsEndY + 5);
@@ -246,7 +260,7 @@ export function addTotalSection(
   // Add the amount with teal background
   doc.setFillColor(0, 179, 179); // #00b3b3
   doc.rect(pageWidth - margin - 50, itemsEndY - 7, 50, 8, 'F');
-  const totalAmount = `${currencySymbol} ${invoice.total.toLocaleString('en-IN')}`;
+  const totalAmount = formatCurrency(invoice.total, currencyCode);
   doc.text(totalAmount, pageWidth - margin - 5, itemsEndY - 2, { align: 'right' });
   
   // Add border line after total
@@ -273,9 +287,11 @@ export function addPaymentSection(
   // Payment details column
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
   doc.text("Payment Account Details", margin, itemsEndY);
   doc.setDrawColor(0, 0, 0);
   doc.line(margin, itemsEndY + 2, margin + 60, itemsEndY + 2);
+  doc.setFont("helvetica", "normal");
   
   // Use invoice payment details if available, otherwise use default
   const paymentDetails = invoice.paymentDetails || {
@@ -308,12 +324,19 @@ export function addPaymentSection(
   doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 50, itemsEndY + 15, { align: 'right' });
   doc.setFont("helvetica", "normal");
   
+  // Get stamp URL with fallback
+  const stampUrl = companySettings.stamp || companySettings.stamp_url || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+  
   // Add stamp if available (with larger size)
-  if (companySettings.stamp || companySettings.stamp_url) {
+  try {
+    doc.addImage(stampUrl, 'JPEG', pageWidth - margin - 90, itemsEndY + 20, 35, 35);
+  } catch (error) {
+    console.error("Could not add stamp image:", error);
+    // Try with placeholder
     try {
-      doc.addImage(companySettings.stamp || companySettings.stamp_url, 'JPEG', pageWidth - margin - 90, itemsEndY + 20, 35, 35);
-    } catch (error) {
-      console.error("Could not add stamp image:", error);
+      doc.addImage("/placeholder.svg", 'JPEG', pageWidth - margin - 90, itemsEndY + 20, 35, 35);
+    } catch (e) {
+      console.error("Could not add placeholder image either:", e);
     }
   }
   
@@ -363,7 +386,7 @@ export function addFooterSection(
   
   // Notes section with teal background
   doc.setFillColor(0, 179, 179); // #00b3b3
-  doc.rect(margin, paymentEndY + 40, contentWidth, 25, 'F');
+  doc.rect(margin, paymentEndY + 40, contentWidth, 30, 'F');
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.text("Note:", margin + 5, paymentEndY + 50);

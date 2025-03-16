@@ -78,6 +78,10 @@ export function InvoiceDetails({
   const currencySymbol = getCurrencySymbol(invoice.currency as string || "INR");
   const amountInWords = convertNumberToWords(invoice.total, invoice.currency as any || "INR");
 
+  // Default logo and stamp if not provided
+  const logoUrl = companySettings.logo || "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+  const stampUrl = companySettings.stamp || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+
   return (
     <div className="invoice-container max-w-4xl mx-auto border border-gray-200 rounded-md overflow-hidden">
       {/* Accent bar */}
@@ -87,9 +91,13 @@ export function InvoiceDetails({
       <div className="flex justify-between items-center p-6 border-b border-gray-200">
         <div className="logo-section">
           <img
-            src={companySettings.logo || "/placeholder.svg"}
+            src={logoUrl}
             alt="Logo"
-            className="h-20 w-auto" // Increased logo size from h-12 to h-20
+            className="h-20 w-auto object-contain"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "/placeholder.svg";
+            }}
           />
           <div className="text-xs text-gray-500 mt-1">{companySettings.slogan}</div>
         </div>
@@ -189,13 +197,15 @@ export function InvoiceDetails({
             For {companySettings.name},<br />
             <span className="font-bold">RICHU EAPEN GEORGE</span>
           </div>
-          {companySettings.stamp && (
-            <img 
-              src={companySettings.stamp} 
-              alt="Company Stamp"
-              className="w-24 h-auto inline-block" // Increased stamp size from w-20 to w-24
-            />
-          )}
+          <img 
+            src={stampUrl} 
+            alt="Company Stamp"
+            className="w-24 h-auto inline-block object-contain"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "/placeholder.svg";
+            }}
+          />
         </div>
       </div>
       

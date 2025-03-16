@@ -3,7 +3,7 @@ import { Invoice, CurrencyCode } from "@/types/invoice";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { getCompanySettings, getInvoiceSettings } from "@/services/settingsService";
-import { PDFOptions, SectionPositions } from "./types";
+import { SectionPositions } from "./types";
 import { getCurrencySymbol } from "./currencyUtils";
 import {
   addHeaderSection,

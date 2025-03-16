@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ const InvoiceView = () => {
   const [pdfPreview, setPdfPreview] = useState<string | undefined>(undefined);
   const [companySettings, setCompanySettings] = useState(getCompanySettings());
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   
   useEffect(() => {
     const handleSettingsUpdate = () => {
@@ -46,10 +48,14 @@ const InvoiceView = () => {
   
   const generatePdfPreview = async (invoiceData: Invoice) => {
     try {
+      setIsPdfLoading(true);
       const preview = await generatePDF(invoiceData, false);
       setPdfPreview(preview);
     } catch (error) {
       console.error("Error generating PDF preview:", error);
+      toast.error("Failed to generate PDF preview");
+    } finally {
+      setIsPdfLoading(false);
     }
   };
   
@@ -363,7 +369,11 @@ const InvoiceView = () => {
         <TabsContent value="preview">
           <Card>
             <CardContent className="p-6">
-              {pdfPreview ? (
+              {isPdfLoading ? (
+                <div className="flex justify-center items-center h-[800px]">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+              ) : pdfPreview ? (
                 <div className="w-full flex justify-center">
                   <iframe
                     src={pdfPreview}
@@ -373,7 +383,15 @@ const InvoiceView = () => {
                 </div>
               ) : (
                 <div className="flex justify-center items-center h-[800px]">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  <div className="text-center">
+                    <p>Unable to generate PDF preview</p>
+                    <Button 
+                      onClick={() => generatePdfPreview(invoice)} 
+                      className="mt-4"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
