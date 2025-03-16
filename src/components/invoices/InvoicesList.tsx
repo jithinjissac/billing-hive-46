@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Table, 
@@ -17,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Eye, Download, Edit, MoreHorizontal, Trash } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { generatePDF } from "@/utils/pdf";
@@ -208,7 +207,12 @@ export function InvoicesList({ searchQuery = "", statusFilter = "all" }: Invoice
             invoicesToDisplay.map((invoice) => (
               <TableRow key={invoice.id}>
                 <TableCell className="font-medium">
-                  {invoice.invoiceNumber}
+                  <Link 
+                    to={`/invoices/${invoice.id}`}
+                    className="text-primary hover:underline"
+                  >
+                    {invoice.invoiceNumber}
+                  </Link>
                 </TableCell>
                 <TableCell>{formatDate(invoice.date)}</TableCell>
                 <TableCell>{invoice.customer.name}</TableCell>
