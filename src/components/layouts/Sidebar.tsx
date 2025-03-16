@@ -25,7 +25,6 @@ export function Sidebar({ children }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const [logoUrl, setLogoUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
-  const [iconUrl, setIconUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
   
   useEffect(() => {
     fetchCompanyImages();
@@ -35,7 +34,7 @@ export function Sidebar({ children }: SidebarProps) {
     try {
       const { data, error } = await supabase
         .from('company_settings')
-        .select('logo_url, icon_url')
+        .select('logo_url')
         .order('id', { ascending: false })
         .limit(1)
         .single();
@@ -48,9 +47,6 @@ export function Sidebar({ children }: SidebarProps) {
       if (data) {
         if (data.logo_url) {
           setLogoUrl(data.logo_url);
-        }
-        if (data.icon_url) {
-          setIconUrl(data.icon_url);
         }
       }
     } catch (error) {
@@ -68,7 +64,7 @@ export function Sidebar({ children }: SidebarProps) {
         <div className="flex items-center justify-between h-16 px-4 border-b bg-white">
           <Link to="/" className="flex items-center gap-2">
             <img 
-              src={iconUrl}
+              src={logoUrl}
               alt="TechiusPay"
               className="h-8 w-auto"
             />
@@ -98,7 +94,7 @@ export function Sidebar({ children }: SidebarProps) {
             <div className="flex items-center justify-between h-16 px-4 border-b">
               <Link to="/" className="flex items-center gap-2">
                 <img 
-                  src={iconUrl}
+                  src={logoUrl}
                   alt="TechiusPay"
                   className="h-8 w-auto"
                 />
@@ -119,7 +115,7 @@ export function Sidebar({ children }: SidebarProps) {
               <div className="flex items-center gap-2 px-2 py-4">
                 <Link to="/" className="flex items-center gap-2">
                   <img 
-                    src={iconUrl}
+                    src={logoUrl}
                     alt="TechiusPay"
                     className="h-8 w-auto"
                   />

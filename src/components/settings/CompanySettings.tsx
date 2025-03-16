@@ -22,8 +22,6 @@ export function CompanySettings() {
   const [logoUrl, setLogoUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
   const [stamp, setStamp] = useState<File | null>(null);
   const [stampUrl, setStampUrl] = useState<string>("");
-  const [icon, setIcon] = useState<File | null>(null);
-  const [iconUrl, setIconUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,8 +51,6 @@ export function CompanySettings() {
         setEmail(localSettings.email);
         setLogoUrl(localSettings.logo);
         setStampUrl(localSettings.stamp || "");
-        setIconUrl(localSettings.icon || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
-        setSlogan(localSettings.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
         return;
       }
       
@@ -68,7 +64,6 @@ export function CompanySettings() {
         setEmail(data.email || "");
         setLogoUrl(data.logo_url || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
         setStampUrl(data.stamp_url || "");
-        setIconUrl(data.icon_url || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
         setSlogan(data.slogan || "EXPERIENCE THE DIGITAL INNOVATION");
       }
     } catch (error) {
@@ -105,7 +100,6 @@ export function CompanySettings() {
       // Process file uploads
       let newLogoUrl = logoUrl;
       let newStampUrl = stampUrl;
-      let newIconUrl = iconUrl;
       
       if (logo) {
         const base64Logo = await uploadFile(logo);
@@ -125,15 +119,6 @@ export function CompanySettings() {
         }
       }
       
-      if (icon) {
-        const base64Icon = await uploadFile(icon);
-        if (base64Icon) {
-          newIconUrl = base64Icon;
-        } else {
-          toast.error("Failed to process icon");
-        }
-      }
-      
       // Update settings in Supabase
       const { data, error } = await supabase
         .from('company_settings')
@@ -147,7 +132,6 @@ export function CompanySettings() {
           email: email,
           logo_url: newLogoUrl,
           stamp_url: newStampUrl,
-          icon_url: newIconUrl,
           slogan: slogan,
           updated_at: new Date().toISOString()
         })
@@ -170,7 +154,6 @@ export function CompanySettings() {
         email,
         logo: newLogoUrl,
         stamp: newStampUrl,
-        icon: newIconUrl,
         slogan
       });
       
@@ -215,39 +198,7 @@ export function CompanySettings() {
               }}
             />
           </div>
-          <p className="text-sm text-muted-foreground">Recommended size: 300x100px. Used in invoices and documents.</p>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="icon">Company Icon</Label>
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-md border border-input flex items-center justify-center overflow-hidden">
-              {icon ? (
-                <img 
-                  src={URL.createObjectURL(icon)} 
-                  alt="Company Icon" 
-                  className="h-full w-full object-contain" 
-                />
-              ) : (
-                <img 
-                  src={iconUrl} 
-                  alt="Company Icon" 
-                  className="h-full w-full object-contain" 
-                />
-              )}
-            </div>
-            <Input
-              id="icon"
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setIcon(e.target.files[0]);
-                }
-              }}
-            />
-          </div>
-          <p className="text-sm text-muted-foreground">Square icon used in the sidebar. Recommended size: 64x64px.</p>
+          <p className="text-sm text-muted-foreground">Recommended size: 300x100px. Used in invoices and documents. Also used in sidebar as icon.</p>
         </div>
         
         <div className="space-y-2">

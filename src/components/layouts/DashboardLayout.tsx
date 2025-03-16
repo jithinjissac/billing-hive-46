@@ -23,7 +23,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     try {
       const { data, error } = await supabase
         .from('company_settings')
-        .select('icon_url')
+        .select('logo_url')
         .order('id', { ascending: false })
         .limit(1)
         .single();
@@ -33,8 +33,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         return;
       }
       
-      if (data && data.icon_url) {
-        setIconUrl(data.icon_url);
+      if (data && data.logo_url) {
+        setIconUrl(data.logo_url);
       }
     } catch (error) {
       console.error("Error fetching company icon:", error);
