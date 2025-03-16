@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +28,8 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface InvoiceFormProps {
   invoice?: Invoice;
@@ -62,6 +63,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
   const [discount, setDiscount] = useState(invoiceData?.discount || 0);
   const [isTaxEnabled, setIsTaxEnabled] = useState(invoiceData?.isTaxEnabled === true);
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
@@ -70,6 +72,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
   
   useEffect(() => {
     fetchCustomers();
+    fetchSettingsNotes();
   }, []);
   
   useEffect(() => {
@@ -130,6 +133,33 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
       toast.error("Failed to load customers");
     } finally {
       setIsLoadingCustomers(false);
+    }
+  };
+  
+  const fetchSettingsNotes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invoice_settings')
+        .select('notes')
+        .limit(1)
+        .single();
+        
+      if (error) {
+        console.error("Error fetching invoice settings notes:", error);
+        return;
+      }
+      
+      if (data && data.notes) {
+        // If we have existing notes from invoice data, use those
+        if (invoiceData?.notes) {
+          setSelectedNotes(invoiceData.notes.split('\n').filter(note => note.trim() !== ''));
+        } else {
+          // Otherwise default to all notes being selected
+          setSelectedNotes(data.notes);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching invoice settings notes:", error);
     }
   };
   
@@ -209,6 +239,9 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
       return;
     }
     
+    // Join selected notes into a string
+    const notesText = selectedNotes.join('\n');
+    
     const finalInvoiceData: Invoice = {
       id: invoiceData?.id || crypto.randomUUID(),
       invoiceNumber,
@@ -216,12 +249,12 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
       date,
       dueDate,
       status,
-      items,
+      items: items.filter(item => item.quantity > 0),  // Only include items with quantity > 0
       currency: currency as CurrencyCode,
       subtotal,
       tax,
       total,
-      notes,
+      notes: notesText,
       discount,
       isTaxEnabled
     };
@@ -238,6 +271,18 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
     if (value === "draft" || value === "pending" || value === "paid" || value === "overdue") {
       setStatus(value as "draft" | "pending" | "paid" | "overdue");
     }
+  };
+  
+  const handleNoteToggle = (note: string) => {
+    setSelectedNotes(prevNotes => {
+      if (prevNotes.includes(note)) {
+        // Note exists, remove it
+        return prevNotes.filter(n => n !== note);
+      } else {
+        // Note doesn't exist, add it
+        return [...prevNotes, note];
+      }
+    });
   };
   
   return (
@@ -494,14 +539,37 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
         </Table>
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="notes">Notes</Label>
-        <Input
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Payment terms, delivery notes, etc."
-        />
+      <div className="space-y-4">
+        <Label className="block text-base font-medium">Invoice Notes</Label>
+        
+        <div className="space-y-2">
+          {defaultSettings.notes && defaultSettings.notes.map((note, index) => (
+            <div key={index} className="flex items-start space-x-2">
+              <Checkbox 
+                id={`note-${index}`} 
+                checked={selectedNotes.includes(note)}
+                onCheckedChange={() => handleNoteToggle(note)}
+              />
+              <Label 
+                htmlFor={`note-${index}`}
+                className="text-sm font-normal leading-tight cursor-pointer"
+              >
+                {note}
+              </Label>
+            </div>
+          ))}
+        </div>
+        
+        <div className="pt-4">
+          <Label htmlFor="custom-note">Custom Note</Label>
+          <Input
+            id="custom-note"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Additional custom note"
+            className="mt-2"
+          />
+        </div>
       </div>
       
       <div className="flex justify-end gap-2">

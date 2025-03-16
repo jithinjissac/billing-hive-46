@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ const InvoiceEdit = () => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
             id: item.id,
+            name: item.name || "",  // Include item name
             description: item.description,
             quantity: item.quantity,
             price: Number(item.price),
@@ -174,6 +176,7 @@ const InvoiceEdit = () => {
           .from('invoice_items')
           .insert({
             invoice_id: id,
+            name: item.name || "",  // Include item name when updating
             description: item.description,
             quantity: item.quantity,
             price: item.price
