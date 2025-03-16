@@ -27,25 +27,17 @@ export const createPublicBucket = async (bucketName: string) => {
       if (bucketExists) {
         console.log(`Bucket ${bucketName} already exists, updating permissions...`);
         
-        // Try to update policy directly
+        // Try to update policies directly - removed getPolicies and createPolicy calls
+        // which don't exist on StorageFileApi
         try {
-          // Get existing policies
-          const { data: policies } = await supabase.storage.from(bucketName).getPolicies();
+          // Update existing bucket to ensure it's public
+          await supabase.storage.updateBucket(bucketName, {
+            public: true,
+            fileSizeLimit: 5242880,
+            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+          });
           
-          // If policies exist but aren't public, try to update
-          if (policies) {
-            // Create open policy if needed
-            await supabase.storage.from(bucketName).createPolicy(
-              'allow-all-access',
-              {
-                definition: "TRUE",
-                allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
-              }
-            );
-            
-            console.log(`Updated policies for existing bucket ${bucketName}`);
-          }
-          
+          console.log(`Updated bucket ${bucketName} to be public`);
           return { success: true, message: `Bucket ${bucketName} permissions updated` };
         } catch (policyError) {
           console.error('Error updating bucket policies:', policyError);
@@ -61,22 +53,9 @@ export const createPublicBucket = async (bucketName: string) => {
           });
           
           if (!createError) {
-            // Try to set an open policy
-            try {
-              await supabase.storage.from(bucketName).createPolicy(
-                'allow-all-access',
-                {
-                  definition: "TRUE",
-                  allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
-                }
-              );
-              
-              console.log(`Successfully created public bucket ${bucketName} with open policy`);
-              return { success: true, message: `Bucket ${bucketName} created with open policy` };
-            } catch (policyError) {
-              console.error('Error setting bucket policy:', policyError);
-              // Continue to edge function as fallback
-            }
+            // Removed createPolicy call which doesn't exist on StorageFileApi
+            console.log(`Successfully created public bucket ${bucketName}`);
+            return { success: true, message: `Bucket ${bucketName} created successfully` };
           }
         } catch (createBucketError) {
           console.error('Error creating bucket directly:', createBucketError);
