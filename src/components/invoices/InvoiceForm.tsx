@@ -30,6 +30,7 @@ import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Textarea } from "@/components/ui/textarea";
 
 interface InvoiceFormProps {
   invoice?: Invoice;
@@ -58,12 +59,13 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
   const [items, setItems] = useState<InvoiceItem[]>(invoiceData?.items || [
     { id: crypto.randomUUID(), name: "", description: "", quantity: 1, price: 0 }
   ]);
-  const [notes, setNotes] = useState(invoiceData?.notes || defaultSettings.defaultNotes);
   const [currency, setCurrency] = useState<CurrencyCode>(invoiceData?.currency as CurrencyCode || defaultSettings.defaultCurrency);
   const [discount, setDiscount] = useState(invoiceData?.discount || 0);
   const [isTaxEnabled, setIsTaxEnabled] = useState(invoiceData?.isTaxEnabled === true);
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
+  const [availableNotes, setAvailableNotes] = useState<string[]>(defaultSettings.notes || []);
+  const [newNote, setNewNote] = useState("");
   
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
@@ -150,12 +152,15 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
       }
       
       if (data && data.notes) {
-        // If we have existing notes from invoice data, use those
+        setAvailableNotes(data.notes);
+        
+        // If we have existing notes from invoice data, parse them and set as selected
         if (invoiceData?.notes) {
-          setSelectedNotes(invoiceData.notes.split('\n').filter(note => note.trim() !== ''));
+          const invoiceNoteLines = invoiceData.notes.split('\n').filter(note => note.trim() !== '');
+          setSelectedNotes(invoiceNoteLines);
         } else {
-          // Otherwise default to all notes being selected
-          setSelectedNotes(data.notes);
+          // Otherwise, don't select any notes by default
+          setSelectedNotes([]);
         }
       }
     } catch (error) {
@@ -283,6 +288,24 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
         return [...prevNotes, note];
       }
     });
+  };
+  
+  const handleAddNewNote = () => {
+    if (!newNote.trim()) {
+      toast.error("Please enter a note");
+      return;
+    }
+    
+    // Add to available notes
+    setAvailableNotes(prev => [...prev, newNote]);
+    
+    // Add to selected notes as well (it's selected by default)
+    setSelectedNotes(prev => [...prev, newNote]);
+    
+    // Clear the input
+    setNewNote("");
+    
+    toast.success("Note added successfully!");
   };
   
   return (
@@ -543,7 +566,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
         <Label className="block text-base font-medium">Invoice Notes</Label>
         
         <div className="space-y-2">
-          {defaultSettings.notes && defaultSettings.notes.map((note, index) => (
+          {availableNotes.map((note, index) => (
             <div key={index} className="flex items-start space-x-2">
               <Checkbox 
                 id={`note-${index}`} 
@@ -560,15 +583,24 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
           ))}
         </div>
         
-        <div className="pt-4">
-          <Label htmlFor="custom-note">Custom Note</Label>
-          <Input
-            id="custom-note"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Additional custom note"
-            className="mt-2"
-          />
+        <div className="pt-4 space-y-2 border-t border-gray-200">
+          <Label htmlFor="new-note">Add New Note</Label>
+          <div className="flex gap-2">
+            <Textarea
+              id="new-note"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Enter a new note to add to the invoice"
+              className="flex-1"
+            />
+            <Button 
+              type="button" 
+              onClick={handleAddNewNote}
+              className="mt-auto"
+            >
+              Add Note
+            </Button>
+          </div>
         </div>
       </div>
       

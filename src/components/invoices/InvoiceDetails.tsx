@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -84,6 +85,9 @@ export function InvoiceDetails({
   
   const logoUrl = logoError ? defaultLogoUrl : (companySettings.logo || defaultLogoUrl);
   const stampUrl = stampError ? defaultStampUrl : (companySettings.stamp || defaultStampUrl);
+
+  // Parse notes from the invoice (which should be a \n separated string)
+  const invoiceNotes = invoice.notes ? invoice.notes.split('\n').filter(note => note.trim() !== '') : [];
 
   console.log("Company settings in InvoiceDetails:", companySettings);
   console.log("Logo URL:", logoUrl);
@@ -227,9 +231,13 @@ export function InvoiceDetails({
       <div className="bg-[#00b3b3] text-white p-4">
         <h3 className="text-base font-bold mb-2">Note:</h3>
         <ul className="list-disc pl-5 text-sm space-y-1">
-          {(invoiceSettings.notes || []).map((note, index) => (
-            <li key={index}>{note}</li>
-          ))}
+          {invoiceNotes.length > 0 ? (
+            invoiceNotes.map((note, index) => (
+              <li key={index}>{note}</li>
+            ))
+          ) : (
+            <li>No additional notes for this invoice.</li>
+          )}
         </ul>
       </div>
     </div>
