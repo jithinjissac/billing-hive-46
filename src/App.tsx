@@ -15,7 +15,6 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
-
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -53,4 +52,5 @@ const App = () => {
     </QueryClientProvider>
   );
 };
+
 export default App;
