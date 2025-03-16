@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { InvoiceStats } from "@/components/dashboard/InvoiceStats";
 import { MoveRight, Plus } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseHealthIndicator } from "@/components/dashboard/DatabaseHealthIndicator";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -137,6 +137,8 @@ const Dashboard = () => {
           New Invoice
         </Button>
       </div>
+      
+      <DatabaseHealthIndicator />
       
       {totalsGrid}
       
