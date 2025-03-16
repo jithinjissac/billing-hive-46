@@ -304,7 +304,12 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     doc.text(`For ${mergedCompanySettings.name},`, pageWidth - margin - 50, itemsEndY + 5, { align: 'right' });
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text(creatorName || "RICHU EAPEN GEORGE", pageWidth - margin - 50, itemsEndY + 15, { align: 'right' });
+    
+    // Use provided creatorName, invoice creatorName, or default name
+    const displayCreatorName = creatorName || 
+                               (invoice.creatorName || "RICHU EAPEN GEORGE");
+    
+    doc.text(displayCreatorName, pageWidth - margin - 50, itemsEndY + 15, { align: 'right' });
     doc.setFont("helvetica", "normal");
     
     // Add stamp if available

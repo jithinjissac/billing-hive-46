@@ -70,31 +70,34 @@ const InvoiceView = () => {
           return;
         }
         
-        const { data: columnInfo } = await supabase
+        const { data: invoiceCheck, error: checkError } = await supabase
           .from('invoices')
-          .select('*')
-          .limit(1);
-          
-        const hasCreatorColumns = columnInfo && columnInfo.length > 0 && 
-          'creator_id' in columnInfo[0] && 'creator_name' in columnInfo[0];
-        
-        const query = supabase
-          .from('invoices')
-          .select('*')
+          .select('id')
           .eq('id', id)
           .single();
-        
-        const { data: invoiceData, error: invoiceError } = await query;
-        
-        if (invoiceError) {
-          console.error("Error fetching invoice:", invoiceError);
+          
+        if (checkError) {
+          console.error("Error checking invoice:", checkError);
           toast.error("Failed to load invoice");
           navigate("/invoices");
           return;
         }
         
-        if (!invoiceData) {
+        if (!invoiceCheck) {
           toast.error("Invoice not found");
+          navigate("/invoices");
+          return;
+        }
+        
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (invoiceError) {
+          console.error("Error fetching invoice:", invoiceError);
+          toast.error("Failed to load invoice");
           navigate("/invoices");
           return;
         }
@@ -140,13 +143,11 @@ const InvoiceView = () => {
           };
         });
         
-        console.log("Mapped items with names:", items);
-        
         let status = invoiceData.status as "draft" | "pending" | "paid" | "overdue";
         
         console.log("Notes from DB:", invoiceData.notes);
         
-        const invoiceCreatorName = hasCreatorColumns ? (invoiceData.creator_name || "Unknown") : "Unknown";
+        const invoiceCreatorName = invoiceData.creator_name || "Unknown";
         setCreatorName(invoiceCreatorName);
         
         const fullInvoice: Invoice = {
@@ -169,8 +170,8 @@ const InvoiceView = () => {
           notes: invoiceData.notes || '',
           currency: invoiceData.currency,
           discount: Number(invoiceData.discount || 0),
-          creatorId: hasCreatorColumns ? invoiceData.creator_id : undefined,
-          creatorName: hasCreatorColumns ? invoiceData.creator_name : undefined,
+          creatorId: invoiceData.creator_id || undefined,
+          creatorName: invoiceData.creator_name || undefined,
           paymentDetails: paymentData ? {
             accountHolder: paymentData.account_holder,
             bankName: paymentData.bank_name,

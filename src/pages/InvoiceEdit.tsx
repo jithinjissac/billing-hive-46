@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,33 +27,36 @@ const InvoiceEdit = () => {
           return;
         }
         
-        // First check if the creator columns exist to avoid errors
-        const { data: columnInfo } = await supabase
+        // First, verify if the invoice exists
+        const { data: invoiceCheck, error: checkError } = await supabase
           .from('invoices')
-          .select('*')
-          .limit(1);
-          
-        const hasCreatorColumns = columnInfo && columnInfo.length > 0 && 
-          'creator_id' in columnInfo[0] && 'creator_name' in columnInfo[0];
-        
-        // Now fetch the invoice with appropriate columns
-        const query = supabase
-          .from('invoices')
-          .select('*')
+          .select('id')
           .eq('id', id)
           .single();
-        
-        const { data: invoiceData, error: invoiceError } = await query;
-        
-        if (invoiceError) {
-          console.error("Error fetching invoice:", invoiceError);
+          
+        if (checkError) {
+          console.error("Error checking invoice:", checkError);
           toast.error("Failed to load invoice");
           navigate("/invoices");
           return;
         }
         
-        if (!invoiceData) {
+        if (!invoiceCheck) {
           toast.error("Invoice not found");
+          navigate("/invoices");
+          return;
+        }
+        
+        // Now fetch the invoice with all details
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (invoiceError) {
+          console.error("Error fetching invoice:", invoiceError);
+          toast.error("Failed to load invoice");
           navigate("/invoices");
           return;
         }
@@ -90,7 +94,7 @@ const InvoiceEdit = () => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
             id: item.id,
-            name: item.name || "", // Ensure we always have a name value, even if empty
+            name: item.name || "", 
             description: item.description,
             quantity: item.quantity,
             price: Number(item.price),
@@ -124,9 +128,9 @@ const InvoiceEdit = () => {
           notes: notesFromDb,
           currency: invoiceData.currency,
           discount: invoiceData.discount || 0,
-          // Safely add creator info if available
-          creatorId: hasCreatorColumns ? invoiceData.creator_id : undefined,
-          creatorName: hasCreatorColumns ? invoiceData.creator_name : undefined,
+          // Add creator details if they exist
+          creatorId: invoiceData.creator_id || undefined,
+          creatorName: invoiceData.creator_name || undefined,
           paymentDetails: paymentData ? {
             accountHolder: paymentData.account_holder,
             bankName: paymentData.bank_name,
@@ -164,16 +168,7 @@ const InvoiceEdit = () => {
         ? updatedInvoice.notes.join('\n') 
         : updatedInvoice.notes || '';
       
-      // First check if the creator columns exist
-      const { data: columnInfo } = await supabase
-        .from('invoices')
-        .select('*')
-        .limit(1);
-        
-      const hasCreatorColumns = columnInfo && columnInfo.length > 0 && 
-        'creator_id' in columnInfo[0] && 'creator_name' in columnInfo[0];
-      
-      // Prepare update object based on available columns
+      // Prepare update object
       const updateData: any = {
         invoice_number: updatedInvoice.invoiceNumber,
         customer_id: updatedInvoice.customer.id,
@@ -187,6 +182,15 @@ const InvoiceEdit = () => {
         currency: updatedInvoice.currency,
         discount: updatedInvoice.discount || 0
       };
+      
+      // Add creator fields if they exist in the updated invoice
+      if (updatedInvoice.creatorId) {
+        updateData.creator_id = updatedInvoice.creatorId;
+      }
+      
+      if (updatedInvoice.creatorName) {
+        updateData.creator_name = updatedInvoice.creatorName;
+      }
       
       // Make sure the notes field is included in the update
       const { error: invoiceError } = await supabase

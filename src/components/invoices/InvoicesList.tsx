@@ -37,31 +37,12 @@ export function InvoicesList({ searchQuery = "", statusFilter = "all" }: Invoice
   const [hasCreatorColumns, setHasCreatorColumns] = useState(false);
   
   useEffect(() => {
-    checkCreatorColumns();
     fetchInvoices();
   }, []);
   
   useEffect(() => {
     applyFilters();
   }, [searchQuery, statusFilter, invoices]);
-  
-  const checkCreatorColumns = async () => {
-    try {
-      const { data: columnInfo } = await supabase
-        .from('invoices')
-        .select('*')
-        .limit(1);
-        
-      setHasCreatorColumns(
-        columnInfo && 
-        columnInfo.length > 0 && 
-        'creator_id' in columnInfo[0] && 
-        'creator_name' in columnInfo[0]
-      );
-    } catch (error) {
-      console.error("Error checking invoice columns:", error);
-    }
-  };
   
   const fetchInvoices = async () => {
     try {
@@ -82,32 +63,49 @@ export function InvoicesList({ searchQuery = "", statusFilter = "all" }: Invoice
         return;
       }
       
+      // Check if creator columns exist in the response
+      setHasCreatorColumns(
+        invoicesData.length > 0 && 
+        'creator_id' in invoicesData[0] && 
+        'creator_name' in invoicesData[0]
+      );
+      
       // Format the data to match our app's structure
-      const formattedInvoices = invoicesData.map(inv => ({
-        id: inv.id,
-        invoiceNumber: inv.invoice_number,
-        date: inv.date,
-        dueDate: inv.due_date,
-        status: inv.status,
-        subtotal: Number(inv.subtotal),
-        tax: Number(inv.tax),
-        total: Number(inv.total),
-        currency: inv.currency,
-        notes: inv.notes,
-        items: [], // Add the missing items property as an empty array
-        discount: Number(inv.discount) || 0,
-        ...(hasCreatorColumns && {
-          creatorId: inv.creator_id,
-          creatorName: inv.creator_name,
-        }),
-        customer: {
-          id: inv.customers.id,
-          name: inv.customers.name,
-          email: inv.customers.email || '',
-          phone: inv.customers.phone || '',
-          address: inv.customers.address || '',
+      const formattedInvoices = invoicesData.map(inv => {
+        // Create a base invoice object
+        const invoice: Invoice = {
+          id: inv.id,
+          invoiceNumber: inv.invoice_number,
+          date: inv.date,
+          dueDate: inv.due_date,
+          status: inv.status,
+          subtotal: Number(inv.subtotal),
+          tax: Number(inv.tax),
+          total: Number(inv.total),
+          currency: inv.currency,
+          notes: inv.notes,
+          items: [], // Add the missing items property as an empty array
+          discount: Number(inv.discount) || 0,
+          customer: {
+            id: inv.customers.id,
+            name: inv.customers.name,
+            email: inv.customers.email || '',
+            phone: inv.customers.phone || '',
+            address: inv.customers.address || '',
+          }
+        };
+        
+        // Add creator fields if they exist
+        if ('creator_id' in inv && inv.creator_id) {
+          invoice.creatorId = inv.creator_id;
         }
-      }));
+        
+        if ('creator_name' in inv && inv.creator_name) {
+          invoice.creatorName = inv.creator_name;
+        }
+        
+        return invoice;
+      });
       
       setInvoices(formattedInvoices);
     } catch (error) {

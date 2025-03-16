@@ -167,6 +167,8 @@ export type Database = {
       invoices: {
         Row: {
           created_at: string | null
+          creator_id: string | null
+          creator_name: string | null
           currency: Database["public"]["Enums"]["currency_code"]
           customer_id: string
           date: string
@@ -183,6 +185,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          creator_id?: string | null
+          creator_name?: string | null
           currency?: Database["public"]["Enums"]["currency_code"]
           customer_id: string
           date?: string
@@ -199,6 +203,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          creator_id?: string | null
+          creator_name?: string | null
           currency?: Database["public"]["Enums"]["currency_code"]
           customer_id?: string
           date?: string
