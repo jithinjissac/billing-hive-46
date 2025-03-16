@@ -28,7 +28,6 @@ const Profile = () => {
     position: "",
   });
 
-  // Initialize form data when profile loads
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -73,19 +72,16 @@ const Profile = () => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     
-    // Reset states
     setUploadingImage(true);
     setUploadProgress(0);
     setUploadError(null);
     
-    // Check if the file is an image
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file");
       setUploadingImage(false);
       return;
     }
     
-    // Check if the file size is less than 5MB
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image size should be less than 5MB");
       setUploadingImage(false);
@@ -93,11 +89,9 @@ const Profile = () => {
     }
     
     try {
-      // Generate a unique file name
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       
-      // Upload the file - without using onUploadProgress since it's not supported
       const { error: uploadError, data } = await supabase.storage
         .from('profile-pictures')
         .upload(fileName, file, {
@@ -111,15 +105,12 @@ const Profile = () => {
         throw uploadError;
       }
       
-      // Set progress to 100% after successful upload
       setUploadProgress(100);
       
-      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('profile-pictures')
         .getPublicUrl(fileName);
       
-      // Update profile with new image URL
       await updateProfile({
         profile_picture_url: publicUrl
       });
@@ -133,7 +124,6 @@ const Profile = () => {
     }
   };
 
-  // Create initials for avatar fallback
   const initials = useMemo(() => {
     if (formData.first_name && formData.last_name) {
       return `${formData.first_name[0]}${formData.last_name[0]}`.toUpperCase();
