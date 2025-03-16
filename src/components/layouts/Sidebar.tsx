@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -11,10 +12,12 @@ import {
   Settings, 
   Menu, 
   X,
-  LogOut
+  LogOut,
+  User
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SidebarProps {
   showCloseButton?: boolean;
@@ -58,6 +61,12 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
       active: pathname.includes("/customers"),
     },
     {
+      label: "Profile",
+      icon: User,
+      href: "/profile",
+      active: pathname === "/profile",
+    },
+    {
       label: "Settings",
       icon: Settings,
       href: "/settings",
@@ -68,7 +77,7 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex h-screen border-r bg-white flex-col min-w-[220px]">
+      <div className="hidden lg:flex h-screen border-r bg-white flex-col min-w-[220px] overflow-hidden">
         <div className="flex h-14 items-center px-4 border-b">
           <Link
             to={user ? "/dashboard" : "/"}
@@ -103,9 +112,15 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
         {user && (
           <div className="p-3 border-t">
             <div className="flex items-center justify-between p-2">
-              <div className="flex items-center">
-                <div className="ml-2 text-sm">
-                  <p className="font-medium">{user.email}</p>
+              <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={userProfile?.profile_picture_url} />
+                  <AvatarFallback>
+                    {user.email?.[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-sm">
+                  <p className="font-medium truncate max-w-[120px]">{userProfile?.first_name ? `${userProfile.first_name} ${userProfile.last_name || ''}` : user.email}</p>
                 </div>
               </div>
             </div>
@@ -143,7 +158,7 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
       
       {/* Mobile Sidebar Content */}
       {showCloseButton && (
-        <div className="lg:hidden">
+        <div className="lg:hidden overflow-hidden">
           <ScrollArea className="flex-1 p-3">
             <nav className="grid items-start gap-2">
               {routes.map((route) => (
@@ -165,9 +180,15 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
           {user && (
             <div className="p-3 border-t">
               <div className="flex items-center justify-between p-2">
-                <div className="flex items-center">
-                  <div className="ml-2 text-sm">
-                    <p className="font-medium">{user.email}</p>
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={userProfile?.profile_picture_url} />
+                    <AvatarFallback>
+                      {user.email?.[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="text-sm">
+                    <p className="font-medium truncate max-w-[180px]">{userProfile?.first_name ? `${userProfile.first_name} ${userProfile.last_name || ''}` : user.email}</p>
                   </div>
                 </div>
               </div>

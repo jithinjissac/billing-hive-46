@@ -43,10 +43,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
-                <Menu />
+                <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="p-0">
+            <SheetContent side="left" className="p-0 w-[280px] max-w-full">
               <Sidebar 
                 showCloseButton={true} 
                 onClose={closeSidebar} 
@@ -55,7 +55,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </SheetContent>
           </Sheet>
         </div>
-        <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 overflow-x-hidden">
           {children}
         </main>
       </div>
@@ -63,9 +63,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   }
   
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 overflow-hidden">
       <Sidebar userProfile={profile} />
-      <main className="flex-1 overflow-auto p-4 sm:p-6">
+      <main className="flex-1 overflow-auto p-4 sm:p-6 max-w-full">
         <div className="container mx-auto">
           {children}
         </div>
