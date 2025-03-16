@@ -53,6 +53,7 @@ const InvoiceCreate = () => {
       // Then insert all invoice items
       const itemsToInsert = invoice.items.map(item => ({
         invoice_id: invoiceData.id, // Use the ID returned from the insert
+        name: item.name || "", // Add name field
         description: item.description,
         quantity: item.quantity,
         price: item.price

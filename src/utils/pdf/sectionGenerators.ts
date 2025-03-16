@@ -102,17 +102,23 @@ export function addInvoiceTitleSection(
   // Format the date properly
   const formattedDate = formatDate(invoice.date);
   
-  // Right align the details
-  const details = [
-    `Date: ${formattedDate}`,
-    `Invoice No: ${invoice.invoiceNumber}`,
-    `Currency: ${invoice.currency || 'INR'}`
-  ];
+  // Right align the details with bold for date and invoice number
+  doc.setFont("helvetica", "bold");
+  doc.text("Date:", pageWidth - margin - doc.getTextWidth("Date: " + formattedDate), currentY + 8);
+  doc.text("Invoice No:", pageWidth - margin - doc.getTextWidth("Invoice No: " + invoice.invoiceNumber), currentY + 13);
+  doc.setFont("helvetica", "normal");
   
-  details.forEach((line, i) => {
-    const textWidth = doc.getTextWidth(line);
-    doc.text(line, pageWidth - margin - textWidth, currentY + 8 + (i * 5));
-  });
+  // Right align the values
+  const dateX = pageWidth - margin - doc.getTextWidth(formattedDate) + doc.getTextWidth("Date: ");
+  const invoiceNoX = pageWidth - margin - doc.getTextWidth(invoice.invoiceNumber) + doc.getTextWidth("Invoice No: ");
+  
+  doc.text(formattedDate, dateX, currentY + 8);
+  doc.text(invoice.invoiceNumber, invoiceNoX, currentY + 13);
+  
+  // Add currency if available
+  if (invoice.currency) {
+    doc.text(`Currency: ${invoice.currency}`, pageWidth - margin - doc.getTextWidth(`Currency: ${invoice.currency}`), currentY + 18);
+  }
 }
 
 /**
@@ -136,16 +142,22 @@ export function addClientSection(
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(10);
   
-  // Split address into lines and add them
-  const clientInfoLines = invoice.customer.address.split(',');
+  // Set font to bold for customer name and address
+  doc.setFont("helvetica", "bold");
   
   // Add the customer name first
   doc.text(invoice.customer.name, margin, currentY + 15);
+  
+  // Split address into lines and add them
+  const clientInfoLines = invoice.customer.address.split(',');
   
   // Add each line of the address
   clientInfoLines.forEach((line, i) => {
     doc.text(line.trim(), margin, currentY + 20 + (i * 5));
   });
+  
+  // Reset font to normal
+  doc.setFont("helvetica", "normal");
   
   // Add border line after client details
   doc.line(margin, currentY + 30, pageWidth - margin, currentY + 30);
@@ -163,8 +175,8 @@ export function addInvoiceTable(
   const { pageWidth, margin, contentWidth, currentY } = positions;
   
   // Improved column widths for better alignment
-  const itemColWidth = contentWidth * 0.40; // 40% for item description
-  const descColWidth = contentWidth * 0.40; // 40% for specs
+  const itemColWidth = contentWidth * 0.30; // 30% for item name
+  const descColWidth = contentWidth * 0.50; // 50% for description
   const amountColWidth = contentWidth * 0.20; // 20% for amount
   
   // Table header - items, description, amount
@@ -190,29 +202,52 @@ export function addInvoiceTable(
   doc.setTextColor(0, 0, 0);
   
   // Process each invoice item
-  invoice.items.forEach((item, i) => {
-    // Item description (first column)
-    let itemY = y + (i * 25);
+  let itemIndex = 0;
+  invoice.items.forEach((item) => {
+    // Only include items with quantity > 0
+    if (item.quantity <= 0) return;
+    
+    // Item name (first column)
+    let itemY = y + (itemIndex * 25);
     doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
     
-    // Handle item description with word wrap
-    itemY = addWrappedText(
-      doc,
-      item.description,
-      margin + 5,
-      itemY,
-      itemColWidth - 10
-    );
+    if (item.name) {
+      // Handle item name with word wrap
+      itemY = addWrappedText(
+        doc,
+        item.name,
+        margin + 5,
+        itemY,
+        itemColWidth - 10
+      );
+    }
     
-    // Specs (second column)
-    if (item.specs && item.specs.length > 0) {
+    doc.setFont("helvetica", "normal");
+    
+    // Description (second column)
+    if (item.description) {
       doc.setFontSize(10);
+      
+      // Add description at the same Y position
+      addWrappedText(
+        doc,
+        item.description,
+        margin + itemColWidth + 5,
+        y + (itemIndex * 25),
+        descColWidth - 10
+      );
+    }
+    
+    // Specs below description if available
+    if (item.specs && item.specs.length > 0) {
+      doc.setFontSize(9);
       doc.setTextColor(102, 102, 102); // #666
       
-      let specsY = y + (i * 25);
+      let specsY = y + (itemIndex * 25) + 10;
       item.specs.forEach((spec) => {
+        doc.text(`• ${spec}`, margin + itemColWidth + 10, specsY);
         specsY += 5;
-        doc.text(`• ${spec}`, margin + itemColWidth + 5, specsY);
       });
     }
     
@@ -222,17 +257,21 @@ export function addInvoiceTable(
     const amount = formatCurrency(item.quantity * item.price, invoice.currency as CurrencyCode);
     
     // Properly align the amount to the right
-    doc.text(amount, pageWidth - margin - 5, y + (i * 25), { align: "right" });
+    doc.text(amount, pageWidth - margin - 5, y + (itemIndex * 25), { align: "right" });
     
     // Add line after each item (except the last one)
-    if (i < invoice.items.length - 1) {
+    const visibleItems = invoice.items.filter(i => i.quantity > 0);
+    if (itemIndex < visibleItems.length - 1) {
       doc.setDrawColor(221, 221, 221); // #ddd
-      doc.line(margin, y + (i * 25) + 15, pageWidth - margin, y + (i * 25) + 15);
+      doc.line(margin, y + (itemIndex * 25) + 15, pageWidth - margin, y + (itemIndex * 25) + 15);
     }
+    
+    itemIndex++;
   });
   
   // Calculate the Y position after all items
-  let itemsEndY = y + ((invoice.items.length - 1) * 25) + 25;
+  const visibleItemsCount = invoice.items.filter(i => i.quantity > 0).length;
+  let itemsEndY = y + ((visibleItemsCount - 1) * 25) + 25;
   
   // Add the subtotal row
   doc.setFontSize(11);

@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -45,7 +44,6 @@ export function InvoiceDetails({
     const handleSettingsUpdate = () => {
       setCompanySettings(getCompanySettings());
       setInvoiceSettings(getInvoiceSettings());
-      // Reset error states when settings update
       setLogoError(false);
       setStampError(false);
     };
@@ -81,7 +79,6 @@ export function InvoiceDetails({
   const currencySymbol = getCurrencySymbol(invoice.currency as string || "INR");
   const amountInWords = convertNumberToWords(invoice.total, invoice.currency as any || "INR");
 
-  // Get the logo and stamp from settings or use fallbacks
   const defaultLogoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
   const defaultStampUrl = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
   
@@ -127,8 +124,8 @@ export function InvoiceDetails({
         <h1 className="text-2xl text-gray-600 font-normal">INVOICE</h1>
         <div className="text-right text-sm">
           <p>
-            Date: {formatDate(invoice.date)}<br />
-            Invoice No: {invoice.invoiceNumber}<br />
+            <span className="font-bold">Date: </span>{formatDate(invoice.date)}<br />
+            <span className="font-bold">Invoice No: </span>{invoice.invoiceNumber}<br />
             {invoice.currency && `Currency: ${invoice.currency}`}
           </p>
         </div>
@@ -137,8 +134,8 @@ export function InvoiceDetails({
       <div className="p-6 border-b border-gray-200">
         <div className="inline-block px-4 py-1 mb-2 bg-[#00b3b3] text-white text-sm">BILL TO</div>
         <p className="text-sm">
-          {invoice.customer.name}<br />
-          {invoice.customer.address.split(',').join(',\n')}
+          <span className="font-bold">{invoice.customer.name}</span><br />
+          <span className="font-bold">{invoice.customer.address.split(',').join(',\n')}</span>
         </p>
       </div>
       
@@ -152,21 +149,24 @@ export function InvoiceDetails({
         </TableHeader>
         <TableBody>
           {invoice.items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="align-top">{item.description}</TableCell>
-              <TableCell className="align-top">
-                {item.specs && item.specs.length > 0 ? (
-                  <ul className="list-none pl-0 text-xs text-gray-500 space-y-1">
-                    {item.specs.map((spec, index) => (
-                      <li key={index}>• {spec}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatCurrency(item.quantity * item.price, invoice.currency as any)}
-              </TableCell>
-            </TableRow>
+            item.quantity > 0 ? (
+              <TableRow key={item.id}>
+                <TableCell className="align-top font-medium">{item.name}</TableCell>
+                <TableCell className="align-top">
+                  {item.description}
+                  {item.specs && item.specs.length > 0 ? (
+                    <ul className="list-none pl-0 text-xs text-gray-500 space-y-1 mt-1">
+                      {item.specs.map((spec, index) => (
+                        <li key={index}>• {spec}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(item.quantity * item.price, invoice.currency as any)}
+                </TableCell>
+              </TableRow>
+            ) : null
           ))}
           <TableRow className="font-bold">
             <TableCell>SUB TOTAL</TableCell>

@@ -1,4 +1,17 @@
 
+// If this file contains more than just the Invoice type, make sure to include those as well
+// This is just updating the InvoiceItem interface to add the name property
+
+export type CurrencyCode = "INR" | "USD" | "GBP" | "AUD";
+
+export interface PaymentDetails {
+  accountHolder: string;
+  bankName: string;
+  accountNumber: string;
+  ifsc: string;
+  branch: string;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -9,13 +22,12 @@ export interface Customer {
 
 export interface InvoiceItem {
   id: string;
+  name?: string;  // Added name field
   description: string;
   quantity: number;
   price: number;
-  specs?: string[]; // Added specs for detailed descriptions
+  specs?: string[];
 }
-
-export type CurrencyCode = "INR" | "USD" | "GBP" | "AUD";
 
 export interface Invoice {
   id: string;
@@ -25,25 +37,12 @@ export interface Invoice {
   dueDate: string;
   status: "draft" | "pending" | "paid" | "overdue";
   items: InvoiceItem[];
+  currency?: CurrencyCode;
   subtotal: number;
   tax: number;
   total: number;
   notes?: string;
   discount?: number;
-  pdfPreview?: string;
-  currency?: CurrencyCode;
   isTaxEnabled?: boolean;
-  paymentDetails?: {
-    accountHolder: string;
-    bankName: string;
-    accountNumber: string;
-    ifsc: string;
-    branch: string;
-  };
-}
-
-export interface CurrencyInfo {
-  code: CurrencyCode;
-  symbol: string;
-  name: string;
+  paymentDetails?: PaymentDetails;
 }

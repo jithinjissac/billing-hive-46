@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
     invoiceData?.status || "pending"
   );
   const [items, setItems] = useState<InvoiceItem[]>(invoiceData?.items || [
-    { id: crypto.randomUUID(), description: "", quantity: 1, price: 0 }
+    { id: crypto.randomUUID(), name: "", description: "", quantity: 1, price: 0 }
   ]);
   const [notes, setNotes] = useState(invoiceData?.notes || defaultSettings.defaultNotes);
   const [currency, setCurrency] = useState<CurrencyCode>(invoiceData?.currency as CurrencyCode || defaultSettings.defaultCurrency);
@@ -147,7 +148,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
   const handleAddItem = () => {
     setItems([
       ...items,
-      { id: crypto.randomUUID(), description: "", quantity: 1, price: 0 }
+      { id: crypto.randomUUID(), name: "", description: "", quantity: 1, price: 0 }
     ]);
   };
   
@@ -379,7 +380,8 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50%]">Description</TableHead>
+              <TableHead className="w-[25%]">Item Name</TableHead>
+              <TableHead className="w-[35%]">Description</TableHead>
               <TableHead>Quantity</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Total</TableHead>
@@ -391,7 +393,15 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
               <TableRow key={item.id}>
                 <TableCell>
                   <Input
-                    value={item.description}
+                    value={item.name || ""}
+                    onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
+                    placeholder="Item name"
+                    required
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={item.description || ""}
                     onChange={(e) => handleItemChange(item.id, "description", e.target.value)}
                     placeholder="Item description"
                     required
@@ -437,13 +447,13 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell colSpan={3} className="text-right">Subtotal</TableCell>
+              <TableCell colSpan={4} className="text-right">Subtotal</TableCell>
               <TableCell>{formatCurrency(subtotal, currency)}</TableCell>
               <TableCell></TableCell>
             </TableRow>
             
             <TableRow>
-              <TableCell colSpan={2} className="text-right">Discount (%)</TableCell>
+              <TableCell colSpan={3} className="text-right">Discount (%)</TableCell>
               <TableCell>
                 <Input
                   type="number"
@@ -461,7 +471,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
             </TableRow>
             
             <TableRow>
-              <TableCell colSpan={2} className="text-right">Tax ({defaultSettings.defaultTaxRate}%)</TableCell>
+              <TableCell colSpan={3} className="text-right">Tax ({defaultSettings.defaultTaxRate}%)</TableCell>
               <TableCell>
                 <div className="flex items-center justify-center">
                   <Switch 
@@ -476,7 +486,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
             </TableRow>
             
             <TableRow>
-              <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
+              <TableCell colSpan={4} className="text-right font-bold">Total</TableCell>
               <TableCell className="font-bold">{formatCurrency(total, currency)}</TableCell>
               <TableCell></TableCell>
             </TableRow>
