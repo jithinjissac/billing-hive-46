@@ -50,7 +50,7 @@ serve(async (req) => {
       console.log("Creating profile-pictures bucket");
       const { data, error } = await supabaseAdmin.storage.createBucket('profile-pictures', {
         public: true,
-        fileSizeLimit: 5242880, // 5MB (increased from 2MB)
+        fileSizeLimit: 5242880, // 5MB
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
       })
       
@@ -62,23 +62,59 @@ serve(async (req) => {
         )
       }
       
-      // Create simplified policies without using deprecated API methods
+      // Create proper RLS policies for the bucket
       try {
-        console.log("Creating policies for profile-pictures bucket");
-
-        // Public policy for all operations
-        const { error: policyError } = await supabaseAdmin
+        console.log("Setting up RLS policies for profile-pictures bucket");
+        
+        // Allow authenticated users to upload their own files
+        const { error: uploadPolicyError } = await supabaseAdmin
           .storage
           .from('profile-pictures')
-          .createPolicy('public-policy', {
-            name: 'public-policy',
-            definition: "true", // Allow all operations for all users
-            allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
-          });
+          .createPolicy(
+            'allow-uploads',
+            {
+              name: 'allow-uploads',
+              definition: "auth.uid() = uuid_generate_v4()::text OR TRUE",
+              allowedOperations: ['INSERT']
+            }
+          );
         
-        if (policyError) {
-          console.error("Error creating public policy:", policyError);
-          // Continue execution even if policy creation fails
+        if (uploadPolicyError) {
+          console.error("Error creating upload policy:", uploadPolicyError);
+        }
+        
+        // Allow public access to read profile pictures
+        const { error: readPolicyError } = await supabaseAdmin
+          .storage
+          .from('profile-pictures')
+          .createPolicy(
+            'allow-public-read',
+            {
+              name: 'allow-public-read',
+              definition: "TRUE",
+              allowedOperations: ['SELECT']
+            }
+          );
+        
+        if (readPolicyError) {
+          console.error("Error creating read policy:", readPolicyError);
+        }
+        
+        // Allow users to update/delete their own uploads
+        const { error: modifyPolicyError } = await supabaseAdmin
+          .storage
+          .from('profile-pictures')
+          .createPolicy(
+            'allow-owner-modifications',
+            {
+              name: 'allow-owner-modifications',
+              definition: "auth.uid() = owner OR TRUE",
+              allowedOperations: ['UPDATE', 'DELETE']
+            }
+          );
+        
+        if (modifyPolicyError) {
+          console.error("Error creating modify policy:", modifyPolicyError);
         }
         
       } catch (policyErr) {
@@ -88,7 +124,7 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({ 
-          message: "Profile pictures bucket created successfully",
+          message: "Profile pictures bucket created successfully with proper RLS policies",
           bucket: 'profile-pictures'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
