@@ -51,7 +51,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const initStorageBucket = async () => {
       try {
-        await supabase.functions.invoke("create-storage-bucket");
+        const { error } = await supabase.functions.invoke("create-storage-bucket");
+        if (error) {
+          console.error("Error invoking create-storage-bucket function:", error);
+        }
       } catch (error) {
         console.error("Error initializing storage bucket:", error);
       }
