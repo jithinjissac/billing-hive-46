@@ -32,10 +32,11 @@ const InvoiceCreate = () => {
           due_date: invoice.dueDate,
           status: invoice.status,
           subtotal: invoice.subtotal,
-          tax: invoice.tax,
+          tax: invoice.isTaxEnabled ? invoice.tax : 0,
           total: invoice.total,
           notes: invoice.notes,
-          currency: currency
+          currency: currency,
+          discount: invoice.discount || 0
         })
         .select()
         .single();

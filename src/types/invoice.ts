@@ -32,6 +32,7 @@ export interface Invoice {
   discount?: number;
   pdfPreview?: string;
   currency?: CurrencyCode;
+  isTaxEnabled?: boolean;
   paymentDetails?: {
     accountHolder: string;
     bankName: string;

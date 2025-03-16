@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +20,15 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { Trash, Plus } from "lucide-react";
+import { Trash, Plus, UserPlus } from "lucide-react";
 import { Invoice, InvoiceItem, Customer, CurrencyCode } from "@/types/invoice";
 import { formatCurrency } from "@/utils/formatters";
 import { getInvoiceSettings, availableCurrencies } from "@/services/settingsService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { CustomerDialog } from "@/components/customers/CustomerDialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 
 interface InvoiceFormProps {
   invoice?: Invoice;
@@ -47,6 +51,9 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
   ]);
   const [notes, setNotes] = useState(invoice?.notes || defaultSettings.defaultNotes);
   const [currency, setCurrency] = useState<CurrencyCode>(invoice?.currency as CurrencyCode || defaultSettings.defaultCurrency);
+  const [discount, setDiscount] = useState(invoice?.discount || 0);
+  const [isTaxEnabled, setIsTaxEnabled] = useState(invoice?.isTaxEnabled !== false);
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
@@ -63,13 +70,16 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
       return sum + (item.quantity * item.price);
     }, 0);
     
-    const calculatedTax = calculatedSubtotal * (defaultSettings.defaultTaxRate / 100);
-    const calculatedTotal = calculatedSubtotal + calculatedTax;
+    const discountAmount = discount > 0 ? (calculatedSubtotal * (discount / 100)) : 0;
+    const afterDiscount = calculatedSubtotal - discountAmount;
+    
+    const calculatedTax = isTaxEnabled ? afterDiscount * (defaultSettings.defaultTaxRate / 100) : 0;
+    const calculatedTotal = afterDiscount + calculatedTax;
     
     setSubtotal(calculatedSubtotal);
     setTax(calculatedTax);
     setTotal(calculatedTotal);
-  }, [items, defaultSettings.defaultTaxRate]);
+  }, [items, discount, isTaxEnabled, defaultSettings.defaultTaxRate]);
   
   const fetchCustomers = async () => {
     try {
@@ -150,6 +160,38 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
     }));
   };
   
+  const handleAddCustomer = async (customer: Customer) => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .insert({
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          address: customer.address
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error("Error adding customer:", error);
+        toast.error("Failed to add customer");
+        return;
+      }
+      
+      toast.success("Customer added successfully!");
+      setIsAddCustomerOpen(false);
+      
+      // Update customers list and select the new customer
+      await fetchCustomers();
+      setCustomerId(customer.id);
+    } catch (error) {
+      console.error("Error adding customer:", error);
+      toast.error("Failed to add customer");
+    }
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -172,7 +214,9 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
       subtotal,
       tax,
       total,
-      notes
+      notes,
+      discount,
+      isTaxEnabled
     };
     
     onSubmit(invoiceData);
@@ -199,7 +243,27 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="customer">Customer</Label>
+          <Label htmlFor="customer" className="flex justify-between">
+            <span>Customer</span>
+            <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                >
+                  <UserPlus className="h-3 w-3 mr-1" />
+                  Add New
+                </Button>
+              </DialogTrigger>
+              <CustomerDialog 
+                open={isAddCustomerOpen} 
+                onOpenChange={setIsAddCustomerOpen}
+                onSubmit={handleAddCustomer}
+              />
+            </Dialog>
+          </Label>
           <Select
             value={customerId}
             onValueChange={setCustomerId}
@@ -367,11 +431,40 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
               <TableCell>{formatCurrency(subtotal, currency)}</TableCell>
               <TableCell></TableCell>
             </TableRow>
+            
             <TableRow>
-              <TableCell colSpan={3} className="text-right">Tax ({defaultSettings.defaultTaxRate}%)</TableCell>
-              <TableCell>{formatCurrency(tax, currency)}</TableCell>
+              <TableCell colSpan={2} className="text-right">Discount (%)</TableCell>
+              <TableCell>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={discount}
+                  onChange={(e) => setDiscount(Number(e.target.value))}
+                  className="w-20"
+                />
+              </TableCell>
+              <TableCell>
+                {discount > 0 ? `- ${formatCurrency(subtotal * (discount / 100), currency)}` : '-'}
+              </TableCell>
               <TableCell></TableCell>
             </TableRow>
+            
+            <TableRow>
+              <TableCell colSpan={2} className="text-right">Tax ({defaultSettings.defaultTaxRate}%)</TableCell>
+              <TableCell>
+                <div className="flex items-center justify-center">
+                  <Switch 
+                    checked={isTaxEnabled} 
+                    onCheckedChange={setIsTaxEnabled}
+                    id="tax-toggle"
+                  />
+                </div>
+              </TableCell>
+              <TableCell>{isTaxEnabled ? formatCurrency(tax, currency) : '-'}</TableCell>
+              <TableCell></TableCell>
+            </TableRow>
+            
             <TableRow>
               <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
               <TableCell className="font-bold">{formatCurrency(total, currency)}</TableCell>
