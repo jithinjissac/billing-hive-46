@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { InvoiceForm } from "@/components/invoices/InvoiceForm";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { Invoice } from "@/types/invoice";
+import { Invoice, CurrencyCode } from "@/types/invoice";
 import { supabase } from "@/integrations/supabase/client";
 
 const InvoiceCreate = () => {
@@ -18,6 +18,9 @@ const InvoiceCreate = () => {
     
     try {
       console.log("Creating invoice:", invoice);
+      
+      // Ensure currency is one of the valid enum values
+      const currency = (invoice.currency as CurrencyCode) || "INR";
       
       // First, insert the invoice record
       const { data: invoiceData, error: invoiceError } = await supabase
@@ -32,7 +35,7 @@ const InvoiceCreate = () => {
           tax: invoice.tax,
           total: invoice.total,
           notes: invoice.notes,
-          currency: invoice.currency || 'INR' // Ensure currency is a valid enum value
+          currency: currency
         })
         .select()
         .single();

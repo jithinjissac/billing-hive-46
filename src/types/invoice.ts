@@ -15,6 +15,8 @@ export interface InvoiceItem {
   specs?: string[]; // Added specs for detailed descriptions
 }
 
+export type CurrencyCode = "INR" | "USD" | "GBP" | "AUD";
+
 export interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -29,7 +31,7 @@ export interface Invoice {
   notes?: string;
   discount?: number;
   pdfPreview?: string;
-  currency?: string;
+  currency?: CurrencyCode;
   paymentDetails?: {
     accountHolder: string;
     bankName: string;
@@ -38,8 +40,6 @@ export interface Invoice {
     branch: string;
   };
 }
-
-export type CurrencyCode = "INR" | "USD" | "GBP" | "AUD";
 
 export interface CurrencyInfo {
   code: CurrencyCode;
