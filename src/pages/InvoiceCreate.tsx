@@ -23,7 +23,6 @@ const InvoiceCreate = () => {
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
-          id: invoice.id,
           invoice_number: invoice.invoiceNumber,
           customer_id: invoice.customer.id,
           date: invoice.date,
@@ -33,7 +32,7 @@ const InvoiceCreate = () => {
           tax: invoice.tax,
           total: invoice.total,
           notes: invoice.notes,
-          currency: invoice.currency
+          currency: invoice.currency || 'INR' // Ensure currency is a valid enum value
         })
         .select()
         .single();
@@ -46,7 +45,7 @@ const InvoiceCreate = () => {
       
       // Then insert all invoice items
       const itemsToInsert = invoice.items.map(item => ({
-        invoice_id: invoice.id,
+        invoice_id: invoiceData.id, // Use the ID returned from the insert
         description: item.description,
         quantity: item.quantity,
         price: item.price
@@ -66,7 +65,7 @@ const InvoiceCreate = () => {
       const { error: paymentError } = await supabase
         .from('payment_details')
         .insert({
-          invoice_id: invoice.id
+          invoice_id: invoiceData.id // Use the ID returned from the insert
         });
         
       if (paymentError) {

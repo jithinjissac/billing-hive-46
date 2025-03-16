@@ -65,6 +65,7 @@ export function InvoicesList() {
         total: Number(inv.total),
         currency: inv.currency,
         notes: inv.notes,
+        items: [], // Add the missing items property as an empty array
         customer: {
           id: inv.customers.id,
           name: inv.customers.name,
