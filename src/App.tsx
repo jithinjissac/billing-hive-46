@@ -14,6 +14,24 @@ import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
+import React, { useEffect } from "react";
+
+const App: React.FC = () => {
+  useEffect(() => {
+    // Select and remove the unwanted element by ID
+    const elements = document.querySelectorAll("#lovable-badge, script[src*='lovable']");
+    
+    elements.forEach((el) => el.remove());
+  }, []); // Runs once when the component mounts
+
+  return (
+    <div>
+      <h1>My React App</h1>
+    </div>
+  );
+};
+
+export default App;
 
 const queryClient = new QueryClient();
 
