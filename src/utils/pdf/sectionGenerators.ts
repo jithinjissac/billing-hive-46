@@ -463,6 +463,7 @@ export function addPaymentSection(
  */
 export function addFooterSection(
   doc: jsPDF,
+  invoice: Invoice,
   invoiceSettings: any,
   positions: SectionPositions
 ): void {
