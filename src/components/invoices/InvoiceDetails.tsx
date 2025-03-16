@@ -37,15 +37,11 @@ export function InvoiceDetails({
     initialCompanySettings || getCompanySettings()
   );
   const [invoiceSettings, setInvoiceSettings] = useState(getInvoiceSettings());
-  const [logoError, setLogoError] = useState(false);
-  const [stampError, setStampError] = useState(false);
   
   useEffect(() => {
     const handleSettingsUpdate = () => {
       setCompanySettings(getCompanySettings());
       setInvoiceSettings(getInvoiceSettings());
-      setLogoError(false);
-      setStampError(false);
     };
     
     window.addEventListener('settings-updated', handleSettingsUpdate);
@@ -78,13 +74,7 @@ export function InvoiceDetails({
 
   const currencySymbol = getCurrencySymbol(invoice.currency as string || "INR");
   const amountInWords = convertNumberToWords(invoice.total, invoice.currency as any || "INR");
-
-  const defaultLogoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
-  const defaultStampUrl = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
   
-  const logoUrl = logoError ? defaultLogoUrl : (companySettings.logo || defaultLogoUrl);
-  const stampUrl = stampError ? defaultStampUrl : (companySettings.stamp || defaultStampUrl);
-
   // Parse notes from the invoice
   const invoiceNotes = Array.isArray(invoice.notes) 
     ? invoice.notes 
@@ -96,8 +86,8 @@ export function InvoiceDetails({
   const discountAmount = invoice.discount > 0 ? (invoice.subtotal * (invoice.discount / 100)) : 0;
 
   console.log("Company settings in InvoiceDetails:", companySettings);
-  console.log("Logo URL:", logoUrl);
-  console.log("Stamp URL:", stampUrl);
+  console.log("Logo URL:", companySettings.logo);
+  console.log("Stamp URL:", companySettings.stamp);
 
   return (
     <div className="invoice-container max-w-4xl mx-auto border border-gray-200 rounded-md overflow-hidden">
@@ -106,14 +96,13 @@ export function InvoiceDetails({
       <div className="flex justify-between items-center p-6 border-b border-gray-200">
         <div className="logo-section">
           <img
-            src={logoUrl}
+            src={companySettings.logo || "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png"}
             alt="Company Logo"
             className="h-20 w-auto object-contain"
             onError={(e) => {
               console.error("Logo load error:", e);
-              setLogoError(true);
               const target = e.target as HTMLImageElement;
-              target.src = defaultLogoUrl;
+              target.src = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
             }}
           />
           <div className="text-xs text-gray-500 mt-1">{companySettings.slogan}</div>
@@ -232,14 +221,13 @@ export function InvoiceDetails({
             <span className="font-bold">RICHU EAPEN GEORGE</span>
           </div>
           <img 
-            src={stampUrl} 
+            src={companySettings.stamp || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"}
             alt="Company Stamp"
             className="w-24 h-auto inline-block object-contain"
             onError={(e) => {
               console.error("Stamp load error:", e);
-              setStampError(true);
               const target = e.target as HTMLImageElement;
-              target.src = defaultStampUrl;
+              target.src = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
             }}
           />
         </div>

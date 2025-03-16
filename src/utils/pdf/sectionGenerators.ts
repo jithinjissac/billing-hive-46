@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 import { SectionPositions } from "./types";
 import { Invoice, CurrencyCode } from "@/types/invoice";
@@ -23,17 +22,17 @@ export function addHeaderSection(
   doc.setDrawColor(221, 221, 221); // #ddd
   doc.setLineWidth(0.5);
   
-  // Get logo with fallback
+  // Default logo URL as fallback only
   const defaultLogoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
   
   // Add company logo
   try {
-    // First try with the user-uploaded logo
+    // Use company logo if available
     if (companySettings.logo && companySettings.logo.trim() !== "") {
       doc.addImage(companySettings.logo, 'AUTO', margin, currentY, 50, 20);
     } else {
-      // If no logo, use default
-      throw new Error("No logo found, using default");
+      // Only use default if no logo is set
+      doc.addImage(defaultLogoUrl, 'PNG', margin, currentY, 50, 20);
     }
     
     doc.setFontSize(10);
@@ -41,7 +40,7 @@ export function addHeaderSection(
     doc.text(companySettings.slogan, margin, currentY + 25);
   } catch (error) {
     console.error("Could not add logo image:", error);
-    // Try fallback image
+    // Try fallback image only if there was an error loading the primary one
     try {
       doc.addImage(defaultLogoUrl, 'PNG', margin, currentY, 50, 20);
     } catch (e) {
@@ -413,21 +412,21 @@ export function addPaymentSection(
   doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 50, currentY + 15, { align: 'right' });
   doc.setFont("helvetica", "normal");
   
-  // Get stamp URL with fallback
+  // Default stamp URL as fallback only
   const defaultStampUrl = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
   
   // Add stamp if available
   try {
-    // First try with the user-uploaded stamp
+    // Use company stamp if available
     if (companySettings.stamp && companySettings.stamp.trim() !== "") {
       doc.addImage(companySettings.stamp, 'AUTO', pageWidth - margin - 70, currentY + 20, 35, 35);
     } else {
-      // If no stamp, use default
-      throw new Error("No stamp found, using default");
+      // Only use default if no stamp is set
+      doc.addImage(defaultStampUrl, 'PNG', pageWidth - margin - 70, currentY + 20, 35, 35);
     }
   } catch (error) {
     console.error("Could not add stamp image:", error);
-    // Try fallback
+    // Try fallback only if there was an error loading the primary one
     try {
       doc.addImage(defaultStampUrl, 'PNG', pageWidth - margin - 70, currentY + 20, 35, 35);
     } catch (e) {
