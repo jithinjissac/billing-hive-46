@@ -79,7 +79,8 @@ const InvoiceEdit = () => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
             id: item.id,
-            name: item.name || "",  // Include item name
+            // Use nullish coalescing to provide a default empty string when name is missing
+            name: item.name || "",
             description: item.description,
             quantity: item.quantity,
             price: Number(item.price),
