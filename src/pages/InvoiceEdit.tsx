@@ -29,7 +29,7 @@ const InvoiceEdit = () => {
         
         const { data: invoiceData, error: invoiceError } = await supabase
           .from('invoices')
-          .select('*')
+          .select('*, creator_id, creator_name')
           .eq('id', id)
           .single();
         
@@ -113,6 +113,8 @@ const InvoiceEdit = () => {
           notes: notesFromDb,
           currency: invoiceData.currency,
           discount: invoiceData.discount || 0,
+          creatorId: invoiceData.creator_id,
+          creatorName: invoiceData.creator_name,
           paymentDetails: paymentData ? {
             accountHolder: paymentData.account_holder,
             bankName: paymentData.bank_name,
@@ -145,6 +147,11 @@ const InvoiceEdit = () => {
       
       console.log("Saving invoice with notes:", updatedInvoice.notes);
       
+      // Convert notes to string if it's an array
+      const notes = Array.isArray(updatedInvoice.notes) 
+        ? updatedInvoice.notes.join('\n') 
+        : updatedInvoice.notes || '';
+      
       // Make sure the notes field is included in the update
       const { error: invoiceError } = await supabase
         .from('invoices')
@@ -157,9 +164,11 @@ const InvoiceEdit = () => {
           subtotal: updatedInvoice.subtotal,
           tax: updatedInvoice.tax,
           total: updatedInvoice.total,
-          notes: updatedInvoice.notes, // Ensure notes are included here
+          notes: notes,
           currency: updatedInvoice.currency,
           discount: updatedInvoice.discount || 0
+          // We don't update creator_id or creator_name here
+          // to preserve the original creator information
         })
         .eq('id', id);
       

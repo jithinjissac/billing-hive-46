@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ const InvoiceView = () => {
         
         const { data: invoiceData, error: invoiceError } = await supabase
           .from('invoices')
-          .select('*')
+          .select('*, creator_id, creator_name')
           .eq('id', id)
           .single();
         
@@ -136,6 +137,7 @@ const InvoiceView = () => {
         
         console.log("Notes from DB:", invoiceData.notes);
         
+        // Handle creator information
         const invoiceCreatorName = invoiceData.creator_name || "Unknown";
         setCreatorName(invoiceCreatorName);
         

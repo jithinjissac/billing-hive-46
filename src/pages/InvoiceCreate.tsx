@@ -37,6 +37,9 @@ const InvoiceCreate = () => {
       // Ensure status is a valid database enum value
       const status = invoice.status;
       
+      // Convert notes to string if it's an array
+      const notes = Array.isArray(invoice.notes) ? invoice.notes.join('\n') : invoice.notes || '';
+      
       // First, insert the invoice record
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
@@ -49,7 +52,7 @@ const InvoiceCreate = () => {
           subtotal: invoice.subtotal,
           tax: invoice.isTaxEnabled ? invoice.tax : 0,
           total: invoice.total,
-          notes: invoice.notes,
+          notes: notes,
           currency: currency,
           discount: invoice.discount || 0,
           creator_id: user?.id,
