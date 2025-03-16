@@ -49,7 +49,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [authInitialized, setAuthInitialized] = useState(false);
   const [bucketInitialized, setBucketInitialized] = useState(false);
   
-  // Initialize storage bucket function with improved error handling
   const initStorageBucket = useCallback(async () => {
     if (!session) {
       console.log("Cannot initialize storage bucket: No active session");
@@ -64,7 +63,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       console.log("Initializing profile-pictures storage bucket...");
       
-      // Use the helper function to create a public bucket
       const response = await createPublicBucket('profile-pictures');
       console.log("Storage bucket response:", response);
       
@@ -72,11 +70,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return response;
     } catch (error) {
       console.error("Error initializing storage bucket:", error);
-      // Log but don't throw to prevent disrupting the app flow
     }
   }, [session, bucketInitialized]);
   
-  // Initialize storage bucket when session is established
   useEffect(() => {
     if (session && !bucketInitialized) {
       initStorageBucket().catch(console.error);
@@ -104,7 +100,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setProfile(existingProfile);
         return existingProfile;
       } else {
-        // If profile doesn't exist, create it
         console.log("Creating new profile for user:", userId);
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
@@ -162,7 +157,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       console.log("Updating profile with data:", profileData);
       
-      // Make sure we have the user ID in the profile data
       const dataToUpdate = {
         ...profileData,
         id: user.id,
@@ -179,7 +173,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
-      // Fetch the updated profile to ensure we have the latest data
       const updatedProfile = await fetchProfile(user.id);
       
       if (updatedProfile) {
