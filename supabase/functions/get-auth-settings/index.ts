@@ -14,6 +14,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const start = Date.now()
+  console.log("Auth settings request received")
+
   try {
     // Create a Supabase client with the Service Role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
@@ -41,17 +44,20 @@ serve(async (req) => {
     const { data, error } = await supabaseAdmin.auth.admin.getConfig()
 
     if (error) {
+      console.error("Error retrieving auth settings:", error.message)
       return new Response(
         JSON.stringify({ error: error.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    console.log(`Auth settings request completed in ${Date.now() - start}ms`)
     return new Response(
       JSON.stringify(data),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    console.error("Unexpected error in get-auth-settings:", error.message)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

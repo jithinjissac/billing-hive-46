@@ -1,5 +1,5 @@
 
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,10 +10,11 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Info } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Profile = () => {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   
@@ -25,6 +26,7 @@ const Profile = () => {
     position: "",
   });
 
+  // Initialize form data when profile loads
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -57,7 +59,6 @@ const Profile = () => {
     
     try {
       await updateProfile(formData);
-      toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
@@ -92,7 +93,10 @@ const Profile = () => {
       // Upload the file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('profile-pictures')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
       
       if (uploadError) {
         throw uploadError;
@@ -119,6 +123,64 @@ const Profile = () => {
     }
   };
 
+  // Create initials for avatar fallback
+  const initials = useMemo(() => {
+    if (formData.first_name && formData.last_name) {
+      return `${formData.first_name[0]}${formData.last_name[0]}`;
+    }
+    return user?.email?.[0].toUpperCase() || "?";
+  }, [formData.first_name, formData.last_name, user]);
+
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Your Profile</h1>
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Picture</CardTitle>
+              <CardDescription>
+                Loading your profile information...
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-6">
+              <Skeleton className="w-32 h-32 rounded-full" />
+              <div className="text-center mt-4">
+                <Skeleton className="h-4 w-32 mx-auto" />
+                <Skeleton className="h-3 w-20 mx-auto mt-2" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Personal Information</CardTitle>
+              <CardDescription>
+                Loading your personal information...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                </div>
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -137,10 +199,8 @@ const Profile = () => {
             <div className="relative mb-6">
               <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
                 <AvatarImage src={profile?.profile_picture_url || ""} alt={formData.first_name} />
-                <AvatarFallback className="text-3xl font-bold">
-                  {formData.first_name && formData.last_name 
-                    ? `${formData.first_name[0]}${formData.last_name[0]}` 
-                    : user?.email?.[0].toUpperCase()}
+                <AvatarFallback className="text-3xl font-bold bg-primary text-white">
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               

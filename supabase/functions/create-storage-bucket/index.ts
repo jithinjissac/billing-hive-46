@@ -14,6 +14,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const start = Date.now()
+  console.log("Storage bucket creation request received")
+
   try {
     // Create a Supabase client with the Service Role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
@@ -57,30 +60,31 @@ serve(async (req) => {
       }
       
       // Set up policy to allow users to upload their own profile pictures
-      const { error: policyError } = await supabaseAdmin.rpc('create_storage_policy', {
-        bucket_name: 'profile-pictures',
-        policy_name: 'Allow authenticated uploads',
+      const { error: policyError } = await supabaseAdmin.storage.from('profile-pictures').createPolicy({
+        name: 'Allow authenticated uploads',
         definition: 'auth.uid() = uuid_filename_component(name)',
-        operation: 'INSERT'
+        type: 'INSERT'
       })
       
       if (policyError) {
         console.error("Error creating policy:", policyError)
       }
       
+      console.log(`Profile pictures bucket created in ${Date.now() - start}ms`)
       return new Response(
         JSON.stringify({ success: true, message: "Profile pictures bucket created successfully" }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
+    console.log(`Storage bucket check completed in ${Date.now() - start}ms`)
     return new Response(
       JSON.stringify({ success: true, message: "Profile pictures bucket already exists" }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
     
   } catch (error) {
-    console.error("Unexpected error:", error)
+    console.error("Unexpected error in create-storage-bucket:", error.message)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
