@@ -24,11 +24,7 @@ const App: React.FC = () => {
     elements.forEach((el) => el.remove());
   }, []); // Runs once when the component mounts
 
-  return (
-    <div>
-      <h1>My React App</h1>
-    </div>
-  );
+  return ();
 };
 
 export default App;
