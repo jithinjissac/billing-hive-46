@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   CreditCard,
@@ -14,7 +13,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface SidebarProps {
   children?: React.ReactNode;
@@ -24,58 +22,11 @@ export function Sidebar({ children }: SidebarProps) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const [logoUrl, setLogoUrl] = useState<string>("");
-  const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    fetchCompanyImages();
-  }, []);
-  
-  const fetchCompanyImages = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('company_settings')
-        .select('logo_url')
-        .order('id', { ascending: false })
-        .limit(1)
-        .single();
-        
-      if (error) {
-        console.error("Error fetching company images:", error);
-        return;
-      }
-      
-      if (data && data.logo_url) {
-        setLogoUrl(data.logo_url);
-      }
-    } catch (error) {
-      console.error("Error fetching company images:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
 
   const isActive = (path: string) => {
     return location.pathname === path;
-  };
-
-  const renderLogo = () => {
-    if (loading) {
-      return <Skeleton className="h-8 w-10" />;
-    }
-    
-    if (logoUrl) {
-      return (
-        <img 
-          src={logoUrl}
-          alt="TechiusPay"
-          className="h-8 w-auto"
-        />
-      );
-    }
-    
-    return null;
   };
 
   return (
@@ -83,7 +34,11 @@ export function Sidebar({ children }: SidebarProps) {
       {isMobile && (
         <div className="flex items-center justify-between h-16 px-4 border-b bg-white">
           <Link to="/" className="flex items-center gap-2">
-            {renderLogo()}
+            <img 
+              src={logoUrl}
+              alt="TechiusPay"
+              className="h-8 w-auto"
+            />
             <span className="font-semibold text-lg">TechiusPay</span>
           </Link>
           <Button
@@ -109,7 +64,11 @@ export function Sidebar({ children }: SidebarProps) {
           {isMobile && (
             <div className="flex items-center justify-between h-16 px-4 border-b">
               <Link to="/" className="flex items-center gap-2">
-                {renderLogo()}
+                <img 
+                  src={logoUrl}
+                  alt="TechiusPay"
+                  className="h-8 w-auto"
+                />
                 <span className="font-semibold text-lg">TechiusPay</span>
               </Link>
               <Button
@@ -126,7 +85,11 @@ export function Sidebar({ children }: SidebarProps) {
             {!isMobile && (
               <div className="flex items-center gap-2 px-2 py-4">
                 <Link to="/" className="flex items-center gap-2">
-                  {renderLogo()}
+                  <img 
+                    src={logoUrl}
+                    alt="TechiusPay"
+                    className="h-10 w-auto"
+                  />
                   <span className="font-semibold text-lg">TechiusPay</span>
                 </Link>
               </div>
