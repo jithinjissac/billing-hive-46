@@ -167,6 +167,7 @@ export type Database = {
           currency: Database["public"]["Enums"]["currency_code"]
           customer_id: string
           date: string
+          discount: number | null
           due_date: string
           id: string
           invoice_number: string
@@ -182,6 +183,7 @@ export type Database = {
           currency?: Database["public"]["Enums"]["currency_code"]
           customer_id: string
           date?: string
+          discount?: number | null
           due_date: string
           id?: string
           invoice_number: string
@@ -197,6 +199,7 @@ export type Database = {
           currency?: Database["public"]["Enums"]["currency_code"]
           customer_id?: string
           date?: string
+          discount?: number | null
           due_date?: string
           id?: string
           invoice_number?: string
