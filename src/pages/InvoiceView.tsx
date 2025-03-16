@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -303,23 +304,23 @@ const InvoiceView = () => {
   
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => navigate("/invoices")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Invoice #{invoice.invoiceNumber}</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">Invoice #{invoice?.invoiceNumber}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center mr-2">
+        <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+          <div className="flex items-center mr-2 w-full sm:w-auto">
             <span className="text-sm text-muted-foreground mr-2">Status:</span>
             <Select
               value={invoice?.status}
               onValueChange={handleStatusChange}
               disabled={isUpdatingStatus}
             >
-              <SelectTrigger className={`w-32 ${getStatusColor(invoice?.status || '')} text-white`}>
+              <SelectTrigger className={`w-full sm:w-32 ${getStatusColor(invoice?.status || '')} text-white`}>
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -331,51 +332,57 @@ const InvoiceView = () => {
             </Select>
           </div>
           
-          <Button variant="outline" onClick={handlePrintPDF}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button onClick={() => navigate(`/invoices/edit/${id}`)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={handlePrintPDF} className="w-full sm:w-auto">
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+            <Button variant="outline" onClick={handleDownloadPDF} className="w-full sm:w-auto">
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+            <Button onClick={() => navigate(`/invoices/edit/${id}`)} className="w-full sm:w-auto">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </div>
         </div>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="details">
-            <span className="flex items-center">
-              <Edit className="h-4 w-4 mr-2" />
-              Invoice Details
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="preview">
-            <span className="flex items-center">
-              <Eye className="h-4 w-4 mr-2" />
-              PDF Preview
-            </span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="mb-4">
+            <TabsTrigger value="details">
+              <span className="flex items-center">
+                <Edit className="h-4 w-4 mr-2" />
+                Invoice Details
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="preview">
+              <span className="flex items-center">
+                <Eye className="h-4 w-4 mr-2" />
+                PDF Preview
+              </span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
         
         <TabsContent value="details">
           <Card>
-            <CardContent className="p-6">
-              <InvoiceDetails 
-                invoice={invoice} 
-                companySettings={companySettings}
-              />
+            <CardContent className="p-2 sm:p-4 md:p-6">
+              <div className="overflow-x-auto">
+                <InvoiceDetails 
+                  invoice={invoice} 
+                  companySettings={companySettings}
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
         
         <TabsContent value="preview">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-2 sm:p-4 md:p-6">
               {isPdfLoading ? (
                 <div className="flex justify-center items-center h-[800px]">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -384,12 +391,12 @@ const InvoiceView = () => {
                 <div className="w-full flex justify-center">
                   <iframe
                     src={pdfPreview}
-                    className="w-full h-[800px] border rounded"
+                    className="w-full h-[300px] sm:h-[500px] md:h-[800px] border rounded"
                     title="Invoice PDF Preview"
                   />
                 </div>
               ) : (
-                <div className="flex justify-center items-center h-[800px]">
+                <div className="flex justify-center items-center h-[300px] sm:h-[500px] md:h-[800px]">
                   <div className="text-center">
                     <p>Unable to generate PDF preview</p>
                     <Button 

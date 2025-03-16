@@ -136,21 +136,21 @@ const Invoices = () => {
   
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Invoices</h1>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
           <Button 
             variant="outline" 
             onClick={handleExport}
             disabled={isExporting}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-full sm:w-auto"
           >
             <FileDown className="h-4 w-4" />
             {isExporting ? "Exporting..." : "Export"}
           </Button>
           <Button 
             onClick={() => navigate("/invoices/create")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-full sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             New Invoice

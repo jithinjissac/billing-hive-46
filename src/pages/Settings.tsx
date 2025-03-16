@@ -9,15 +9,17 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 const Settings = () => {
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">TechiusPay Settings</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">TechiusPay Settings</h1>
       </div>
       
       <Tabs defaultValue="company" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="company">Company</TabsTrigger>
-          <TabsTrigger value="invoice">Invoice</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="mb-4">
+            <TabsTrigger value="company">Company</TabsTrigger>
+            <TabsTrigger value="invoice">Invoice</TabsTrigger>
+          </TabsList>
+        </div>
         
         <TabsContent value="company" className="space-y-4">
           <Card>

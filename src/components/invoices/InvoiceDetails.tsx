@@ -86,21 +86,17 @@ export function InvoiceDetails({
   // Calculate discount amount
   const discountAmount = invoice.discount > 0 ? (invoice.subtotal * (invoice.discount / 100)) : 0;
 
-  console.log("Company settings in InvoiceDetails:", companySettings);
-  console.log("Logo URL:", companySettings.logo);
-  console.log("Stamp URL:", companySettings.stamp);
-
   return (
     <div className="invoice-container max-w-4xl mx-auto border border-gray-200 rounded-md overflow-hidden">
       <div className="h-2 bg-[#00b3b3]"></div>
       
-      <div className="flex justify-between items-center p-6 border-b border-gray-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6 border-b border-gray-200 gap-4">
         <div className="logo-section">
           {companySettings.logo ? (
             <img
               src={companySettings.logo}
               alt="Company Logo"
-              className="h-20 w-auto object-contain"
+              className="h-16 sm:h-20 w-auto object-contain"
               onError={(e) => {
                 console.error("Logo load error:", e);
                 const target = e.target as HTMLImageElement;
@@ -111,14 +107,14 @@ export function InvoiceDetails({
             <img
               src="/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png"
               alt="Default Company Logo"
-              className="h-20 w-auto object-contain"
+              className="h-16 sm:h-20 w-auto object-contain"
             />
           )}
           <div className="text-xs text-gray-500 mt-1">{companySettings.slogan}</div>
         </div>
         
-        <div className="text-right text-sm">
-          <p>
+        <div className="text-right text-xs sm:text-sm">
+          <p className="break-words">
             {companySettings.name}, {companySettings.address}<br />
             UAM No: {companySettings.uamNumber}<br />
             Phone: {companySettings.phone}<br />
@@ -128,9 +124,9 @@ export function InvoiceDetails({
         </div>
       </div>
       
-      <div className="flex justify-between p-6 bg-gray-50 border-b border-gray-200">
-        <h1 className="text-2xl text-gray-600 font-normal">INVOICE</h1>
-        <div className="text-right text-sm">
+      <div className="flex flex-col sm:flex-row justify-between p-4 sm:p-6 bg-gray-50 border-b border-gray-200 gap-4">
+        <h1 className="text-xl sm:text-2xl text-gray-600 font-normal">INVOICE</h1>
+        <div className="text-right text-xs sm:text-sm">
           <p>
             <span className="font-bold">Date: </span>{formatDate(invoice.date)}<br />
             <span className="font-bold">Invoice No: </span>{invoice.invoiceNumber}<br />
@@ -140,9 +136,9 @@ export function InvoiceDetails({
         </div>
       </div>
       
-      <div className="p-6 border-b border-gray-200">
-        <div className="inline-block px-4 py-1 mb-2 bg-[#00b3b3] text-white text-sm">BILL TO</div>
-        <p className="text-sm">
+      <div className="p-4 sm:p-6 border-b border-gray-200">
+        <div className="inline-block px-3 sm:px-4 py-1 mb-2 bg-[#00b3b3] text-white text-xs sm:text-sm">BILL TO</div>
+        <p className="text-xs sm:text-sm break-words">
           <span className="font-bold">{invoice.customer.name}</span><br />
           {invoice.customer.email && <>{invoice.customer.email}<br /></>}
           {invoice.customer.phone && <>{invoice.customer.phone}<br /></>}
@@ -150,72 +146,74 @@ export function InvoiceDetails({
         </p>
       </div>
       
-      <Table>
-        <TableHeader className="bg-gray-50">
-          <TableRow>
-            <TableHead className="text-gray-600">ITEM</TableHead>
-            <TableHead className="text-gray-600">DESCRIPTION</TableHead>
-            <TableHead className="text-right text-gray-600">AMOUNT</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invoice.items.map((item) => (
-            item.quantity > 0 ? (
-              <TableRow key={item.id}>
-                <TableCell className="align-top font-medium">
-                  {item.name || 'Unnamed Item'}
-                </TableCell>
-                <TableCell className="align-top">
-                  {item.description}
-                  {item.specs && item.specs.length > 0 ? (
-                    <ul className="list-none pl-0 text-xs text-gray-500 space-y-1 mt-1">
-                      {item.specs.map((spec, index) => (
-                        <li key={index}>• {spec}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatCurrency(item.quantity * item.price, invoice.currency as any)}
-                </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead className="text-gray-600 text-xs sm:text-sm">ITEM</TableHead>
+              <TableHead className="text-gray-600 text-xs sm:text-sm">DESCRIPTION</TableHead>
+              <TableHead className="text-right text-gray-600 text-xs sm:text-sm">AMOUNT</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoice.items.map((item) => (
+              item.quantity > 0 ? (
+                <TableRow key={item.id}>
+                  <TableCell className="align-top font-medium text-xs sm:text-sm">
+                    {item.name || 'Unnamed Item'}
+                  </TableCell>
+                  <TableCell className="align-top text-xs sm:text-sm">
+                    {item.description}
+                    {item.specs && item.specs.length > 0 ? (
+                      <ul className="list-none pl-0 text-xs text-gray-500 space-y-1 mt-1">
+                        {item.specs.map((spec, index) => (
+                          <li key={index}>• {spec}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="text-right text-xs sm:text-sm">
+                    {formatCurrency(item.quantity * item.price, invoice.currency as any)}
+                  </TableCell>
+                </TableRow>
+              ) : null
+            ))}
+            <TableRow className="font-bold">
+              <TableCell className="text-xs sm:text-sm">SUB TOTAL</TableCell>
+              <TableCell></TableCell>
+              <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(invoice.subtotal, invoice.currency as any)}</TableCell>
+            </TableRow>
+            {invoice.tax > 0 && (
+              <TableRow>
+                <TableCell className="text-xs sm:text-sm">TAX</TableCell>
+                <TableCell></TableCell>
+                <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(invoice.tax, invoice.currency as any)}</TableCell>
               </TableRow>
-            ) : null
-          ))}
-          <TableRow className="font-bold">
-            <TableCell>SUB TOTAL</TableCell>
-            <TableCell></TableCell>
-            <TableCell className="text-right">{formatCurrency(invoice.subtotal, invoice.currency as any)}</TableCell>
-          </TableRow>
-          {invoice.tax > 0 && (
-            <TableRow>
-              <TableCell>TAX</TableCell>
-              <TableCell></TableCell>
-              <TableCell className="text-right">{formatCurrency(invoice.tax, invoice.currency as any)}</TableCell>
-            </TableRow>
-          )}
-          {invoice.discount && invoice.discount > 0 && (
-            <TableRow>
-              <TableCell>DISCOUNT</TableCell>
-              <TableCell></TableCell>
-              <TableCell className="text-right">-{formatCurrency(discountAmount, invoice.currency as any)}</TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            )}
+            {invoice.discount && invoice.discount > 0 && (
+              <TableRow>
+                <TableCell className="text-xs sm:text-sm">DISCOUNT</TableCell>
+                <TableCell></TableCell>
+                <TableCell className="text-right text-xs sm:text-sm">-{formatCurrency(discountAmount, invoice.currency as any)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
       
-      <div className="flex justify-end p-4 border-t border-b border-gray-200">
-        <div className="bg-gray-600 text-white px-3 py-1 mr-3 text-sm min-w-40">
+      <div className="flex flex-col sm:flex-row sm:justify-end p-3 sm:p-4 border-t border-b border-gray-200">
+        <div className="bg-gray-600 text-white px-3 py-1 mb-2 sm:mb-0 sm:mr-3 text-xs sm:text-sm sm:min-w-40 break-words">
           {amountInWords}
         </div>
-        <div className="bg-[#00b3b3] text-white px-3 py-1 text-sm font-bold text-right w-24">
+        <div className="bg-[#00b3b3] text-white px-3 py-1 text-xs sm:text-sm font-bold text-right w-full sm:w-24">
           {formatCurrency(invoice.total, invoice.currency as any)}
         </div>
       </div>
       
-      <div className="flex justify-between p-6 border-b border-gray-200">
-        <div className="payment-details text-sm">
+      <div className="flex flex-col sm:flex-row justify-between p-4 sm:p-6 border-b border-gray-200 gap-4">
+        <div className="payment-details text-xs sm:text-sm">
           <h3 className="underline font-bold mb-2">Payment Account Details</h3>
-          <p className="mb-1">
+          <p className="mb-1 break-words">
             Account Holder: {invoice.paymentDetails?.accountHolder || "Jithin Jacob Issic"}<br />
             Bank Name: {invoice.paymentDetails?.bankName || "Federal Bank"}<br />
             Account Number: {invoice.paymentDetails?.accountNumber || "99980111697400"}<br />
@@ -225,7 +223,7 @@ export function InvoiceDetails({
         </div>
         
         <div className="text-right">
-          <div className="text-sm mb-2">
+          <div className="text-xs sm:text-sm mb-2">
             For {companySettings.name},<br />
             <span className="font-bold">RICHU EAPEN GEORGE</span>
           </div>
@@ -233,7 +231,7 @@ export function InvoiceDetails({
             <img 
               src={companySettings.stamp}
               alt="Company Stamp"
-              className="w-24 h-auto inline-block object-contain"
+              className="w-20 sm:w-24 h-auto inline-block object-contain"
               onError={(e) => {
                 console.error("Stamp load error:", e);
                 const target = e.target as HTMLImageElement;
@@ -244,23 +242,23 @@ export function InvoiceDetails({
             <img 
               src="/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"
               alt="Default Company Stamp"
-              className="w-24 h-auto inline-block object-contain"
+              className="w-20 sm:w-24 h-auto inline-block object-contain"
             />
           )}
         </div>
       </div>
       
-      <div className="py-4 text-center border-b border-gray-200 text-base">
+      <div className="py-3 sm:py-4 text-center border-b border-gray-200 text-sm sm:text-base">
         {invoiceSettings.defaultNotes}
       </div>
       
-      <div className="bg-gray-600 text-white p-4 text-center text-sm italic">
+      <div className="bg-gray-600 text-white p-3 sm:p-4 text-center text-xs sm:text-sm italic">
         {invoiceSettings.footerText}
       </div>
       
-      <div className="bg-[#00b3b3] text-white p-4">
-        <h3 className="text-base font-bold mb-2">Note:</h3>
-        <ul className="list-disc pl-5 text-sm space-y-1">
+      <div className="bg-[#00b3b3] text-white p-3 sm:p-4">
+        <h3 className="text-sm sm:text-base font-bold mb-2">Note:</h3>
+        <ul className="list-disc pl-5 text-xs sm:text-sm space-y-1 break-words">
           {invoiceNotes.length > 0 ? (
             invoiceNotes.map((note, index) => (
               <li key={index}>{note}</li>

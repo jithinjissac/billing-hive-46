@@ -169,24 +169,28 @@ const CustomerDetail = () => {
   
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={() => navigate("/customers")}>
+          <Button variant="ghost" onClick={() => navigate("/customers")} className="h-9">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Customer Details</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Customer Details</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button 
             variant="outline" 
             onClick={() => setIsEditDialogOpen(true)}
+            className="w-full sm:w-auto"
           >
             <Pencil className="h-4 w-4 mr-2" />
             Edit Customer
           </Button>
           
-          <Button onClick={() => navigate("/invoices/create", { state: { customerId: customer.id } })}>
+          <Button 
+            onClick={() => navigate("/invoices/create", { state: { customerId: customer.id } })}
+            className="w-full sm:w-auto"
+          >
             <FileText className="h-4 w-4 mr-2" />
             New Invoice
           </Button>
@@ -201,13 +205,13 @@ const CustomerDetail = () => {
           <CardContent>
             <div className="space-y-4">
               <div>
-                <h3 className="text-xl font-semibold">{customer.name}</h3>
+                <h3 className="text-xl font-semibold break-words">{customer.name}</h3>
               </div>
               
               {customer.email && (
                 <div className="flex items-center">
-                  <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <a href={`mailto:${customer.email}`} className="text-blue-600 hover:underline">
+                  <Mail className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                  <a href={`mailto:${customer.email}`} className="text-blue-600 hover:underline break-words">
                     {customer.email}
                   </a>
                 </div>
@@ -215,8 +219,8 @@ const CustomerDetail = () => {
               
               {customer.phone && (
                 <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <a href={`tel:${customer.phone}`} className="text-blue-600 hover:underline">
+                  <Phone className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                  <a href={`tel:${customer.phone}`} className="text-blue-600 hover:underline break-words">
                     {customer.phone}
                   </a>
                 </div>
@@ -224,8 +228,8 @@ const CustomerDetail = () => {
               
               {customer.address && (
                 <div className="flex items-start">
-                  <MapPin className="h-4 w-4 mr-2 text-muted-foreground mt-1" />
-                  <span className="whitespace-pre-line">{customer.address}</span>
+                  <MapPin className="h-4 w-4 mr-2 text-muted-foreground mt-1 flex-shrink-0" />
+                  <span className="whitespace-pre-line break-words">{customer.address}</span>
                 </div>
               )}
             </div>
@@ -237,7 +241,7 @@ const CustomerDetail = () => {
             <CardTitle>Invoice Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gray-100 p-4 rounded-lg">
                 <div className="text-sm text-muted-foreground">Total Invoices</div>
                 <div className="text-2xl font-bold">{totalInvoices}</div>
@@ -275,58 +279,60 @@ const CustomerDetail = () => {
         <CardContent>
           {invoices.length > 0 ? (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">
-                        {invoice.invoice_number}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(invoice.date), "MMM dd, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(invoice.due_date), "MMM dd, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: invoice.currency || 'USD'
-                        }).format(invoice.total)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(invoice.status)}>
-                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => navigate(`/invoices/${invoice.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">
+                          {invoice.invoice_number}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(invoice.date), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(invoice.due_date), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: invoice.currency || 'USD'
+                          }).format(invoice.total)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(invoice.status)}>
+                            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigate(`/invoices/${invoice.id}`)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               
               {totalPages > 1 && (
-                <div className="mt-4">
+                <div className="mt-4 overflow-x-auto">
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
@@ -337,7 +343,7 @@ const CustomerDetail = () => {
                       </PaginationItem>
                       
                       {[...Array(totalPages)].map((_, i) => (
-                        <PaginationItem key={i}>
+                        <PaginationItem key={i} className="hidden sm:inline-block">
                           <PaginationLink
                             isActive={currentPage === i + 1}
                             onClick={() => handlePageChange(i + 1)}
