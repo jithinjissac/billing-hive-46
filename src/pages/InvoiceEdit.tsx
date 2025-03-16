@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,6 @@ const InvoiceEdit = () => {
           return;
         }
         
-        // Fetch invoice from Supabase
         const { data: invoiceData, error: invoiceError } = await supabase
           .from('invoices')
           .select('*')
@@ -47,7 +45,6 @@ const InvoiceEdit = () => {
           return;
         }
         
-        // Fetch customer
         const { data: customerData, error: customerError } = await supabase
           .from('customers')
           .select('*')
@@ -60,7 +57,6 @@ const InvoiceEdit = () => {
           return;
         }
         
-        // Fetch invoice items
         const { data: itemsData, error: itemsError } = await supabase
           .from('invoice_items')
           .select('*, item_specs(*)')
@@ -72,14 +68,12 @@ const InvoiceEdit = () => {
           return;
         }
         
-        // Fetch payment details
         const { data: paymentData } = await supabase
           .from('payment_details')
           .select('*')
           .eq('invoice_id', id)
           .maybeSingle();
         
-        // Format items
         const items = itemsData.map(item => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
@@ -91,7 +85,8 @@ const InvoiceEdit = () => {
           };
         });
         
-        // Construct the full invoice object for our app
+        let status = invoiceData.status;
+        
         const fullInvoice: Invoice = {
           id: invoiceData.id,
           invoiceNumber: invoiceData.invoice_number,
@@ -104,7 +99,7 @@ const InvoiceEdit = () => {
           },
           date: invoiceData.date,
           dueDate: invoiceData.due_date,
-          status: invoiceData.status,
+          status: status,
           items: items,
           subtotal: Number(invoiceData.subtotal),
           tax: Number(invoiceData.tax),
@@ -138,7 +133,12 @@ const InvoiceEdit = () => {
     try {
       setIsSubmitting(true);
       
-      // Update invoice in Supabase
+      let status = updatedInvoice.status;
+      
+      if (status === "cancelled") {
+        status = "draft";
+      }
+      
       const { error: invoiceError } = await supabase
         .from('invoices')
         .update({
@@ -146,7 +146,7 @@ const InvoiceEdit = () => {
           customer_id: updatedInvoice.customer.id,
           date: updatedInvoice.date,
           due_date: updatedInvoice.dueDate,
-          status: updatedInvoice.status,
+          status: status,
           subtotal: updatedInvoice.subtotal,
           tax: updatedInvoice.tax,
           total: updatedInvoice.total,
@@ -162,7 +162,6 @@ const InvoiceEdit = () => {
         return;
       }
       
-      // Delete old invoice items
       const { error: deleteItemsError } = await supabase
         .from('invoice_items')
         .delete()
@@ -174,7 +173,6 @@ const InvoiceEdit = () => {
         return;
       }
       
-      // Insert new invoice items
       for (const item of updatedInvoice.items) {
         const { data: newItem, error: itemError } = await supabase
           .from('invoice_items')
@@ -193,7 +191,6 @@ const InvoiceEdit = () => {
           return;
         }
         
-        // Insert specs if any
         if (item.specs && item.specs.length > 0 && newItem) {
           const specsToInsert = item.specs.map(spec => ({
             item_id: newItem.id,
@@ -210,7 +207,6 @@ const InvoiceEdit = () => {
         }
       }
       
-      // Update payment details if provided
       if (updatedInvoice.paymentDetails) {
         const { error: paymentError } = await supabase
           .from('payment_details')
@@ -278,17 +274,19 @@ const InvoiceEdit = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Edit Invoice #{invoice.invoiceNumber}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Edit Invoice #{invoice?.invoiceNumber}</h1>
         </div>
       </div>
       
-      <InvoiceForm 
-        editMode={true}
-        initialInvoice={invoice}
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
-        onSaveSuccess={handleSaveSuccess}
-      />
+      {invoice && (
+        <InvoiceForm 
+          editMode={true}
+          initialInvoice={invoice}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          onSaveSuccess={handleSaveSuccess}
+        />
+      )}
     </DashboardLayout>
   );
 };

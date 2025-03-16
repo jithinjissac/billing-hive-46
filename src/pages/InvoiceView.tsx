@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -30,12 +29,10 @@ const InvoiceView = () => {
   const [companySettings, setCompanySettings] = useState(getCompanySettings());
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
-  // Listen for settings changes
   useEffect(() => {
     const handleSettingsUpdate = () => {
       setCompanySettings(getCompanySettings());
       
-      // Regenerate PDF preview if invoice exists
       if (invoice) {
         generatePdfPreview(invoice);
       }
@@ -47,7 +44,6 @@ const InvoiceView = () => {
     };
   }, [invoice]);
   
-  // Generate PDF preview without downloading
   const generatePdfPreview = async (invoiceData: Invoice) => {
     try {
       const preview = await generatePDF(invoiceData, false);
@@ -68,7 +64,6 @@ const InvoiceView = () => {
           return;
         }
         
-        // Fetch invoice from Supabase
         const { data: invoiceData, error: invoiceError } = await supabase
           .from('invoices')
           .select('*')
@@ -88,7 +83,6 @@ const InvoiceView = () => {
           return;
         }
         
-        // Fetch customer
         const { data: customerData, error: customerError } = await supabase
           .from('customers')
           .select('*')
@@ -101,7 +95,6 @@ const InvoiceView = () => {
           return;
         }
         
-        // Fetch invoice items
         const { data: itemsData, error: itemsError } = await supabase
           .from('invoice_items')
           .select('*, item_specs(*)')
@@ -113,14 +106,12 @@ const InvoiceView = () => {
           return;
         }
         
-        // Fetch payment details
         const { data: paymentData } = await supabase
           .from('payment_details')
           .select('*')
           .eq('invoice_id', id)
           .maybeSingle();
         
-        // Format items
         const items = itemsData.map(item => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
@@ -132,7 +123,6 @@ const InvoiceView = () => {
           };
         });
         
-        // Construct the full invoice object for our app
         const fullInvoice: Invoice = {
           id: invoiceData.id,
           invoiceNumber: invoiceData.invoice_number,
@@ -163,7 +153,6 @@ const InvoiceView = () => {
         
         setInvoice(fullInvoice);
         
-        // Generate PDF preview
         await generatePdfPreview(fullInvoice);
       } catch (error) {
         console.error("Error fetching invoice:", error);
@@ -180,7 +169,7 @@ const InvoiceView = () => {
     if (!invoice) return;
     
     try {
-      await generatePDF(invoice, true); // true to trigger download
+      await generatePDF(invoice, true);
       toast.success("Invoice downloaded successfully");
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -192,23 +181,17 @@ const InvoiceView = () => {
     if (!pdfPreview) return;
     
     try {
-      // Create a temporary iframe
       const printFrame = document.createElement('iframe');
       printFrame.style.display = 'none';
       document.body.appendChild(printFrame);
       
-      // Set the PDF content
       printFrame.src = pdfPreview;
       
-      // Wait for iframe to load then print
       printFrame.onload = () => {
         try {
-          // Focus the iframe window
           printFrame.contentWindow?.focus();
-          // Print the iframe
           printFrame.contentWindow?.print();
           
-          // Remove the iframe after printing (with a delay)
           setTimeout(() => {
             document.body.removeChild(printFrame);
           }, 1000);
@@ -223,12 +206,11 @@ const InvoiceView = () => {
     }
   };
   
-  // Handle invoice status update
   const handleStatusChange = async (newStatus: string) => {
     if (!invoice || !id) return;
     
-    // Validate the status is of the correct type
-    if (newStatus !== 'draft' && newStatus !== 'pending' && newStatus !== 'paid' && newStatus !== 'overdue' && newStatus !== 'cancelled') {
+    if (newStatus !== 'draft' && newStatus !== 'pending' && newStatus !== 'paid' && 
+        newStatus !== 'overdue' && newStatus !== 'cancelled') {
       toast.error("Invalid status value");
       return;
     }
@@ -236,10 +218,14 @@ const InvoiceView = () => {
     try {
       setIsUpdatingStatus(true);
       
-      // Update the invoice status in the database
+      let dbStatus = newStatus;
+      if (dbStatus === "cancelled") {
+        dbStatus = "draft";
+      }
+      
       const { error } = await supabase
         .from('invoices')
-        .update({ status: newStatus })
+        .update({ status: dbStatus })
         .eq('id', id);
       
       if (error) {
@@ -248,12 +234,10 @@ const InvoiceView = () => {
         return;
       }
       
-      // Update the local invoice object with correct typing
       setInvoice(prev => {
         if (!prev) return null;
         
-        // Use type assertion to handle the status typing
-        const updatedStatus = newStatus as "draft" | "pending" | "paid" | "overdue";
+        const updatedStatus = newStatus as "draft" | "pending" | "paid" | "overdue" | "cancelled";
         
         return {
           ...prev,
@@ -318,15 +302,14 @@ const InvoiceView = () => {
           <h1 className="text-3xl font-bold tracking-tight">Invoice #{invoice.invoiceNumber}</h1>
         </div>
         <div className="flex items-center gap-2">
-          {/* Status Update Dropdown */}
           <div className="flex items-center mr-2">
             <span className="text-sm text-muted-foreground mr-2">Status:</span>
             <Select
-              value={invoice.status}
+              value={invoice?.status}
               onValueChange={handleStatusChange}
               disabled={isUpdatingStatus}
             >
-              <SelectTrigger className={`w-32 ${getStatusColor(invoice.status)} text-white`}>
+              <SelectTrigger className={`w-32 ${getStatusColor(invoice?.status || '')} text-white`}>
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
