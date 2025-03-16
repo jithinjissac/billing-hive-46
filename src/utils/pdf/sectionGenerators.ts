@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 import { SectionPositions } from "./types";
 import { Invoice, CurrencyCode } from "@/types/invoice";
@@ -16,7 +17,7 @@ export function addHeaderSection(
   
   // Add accent bar at the top (teal color)
   doc.setFillColor(0, 179, 179); // #00b3b3 - teal
-  doc.rect(0, 0, pageWidth, 10, 'F');
+  doc.rect(0, 0, pageWidth, 2, 'F');
   
   // Header section with logo and company info
   doc.setDrawColor(221, 221, 221); // #ddd
@@ -25,20 +26,11 @@ export function addHeaderSection(
   // Get logo with fallback
   const defaultLogoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
   
-  console.log("Company settings in PDF Generator:", companySettings);
-  console.log("Logo URL in PDF:", companySettings.logo || defaultLogoUrl);
-  
   // Add company logo
   try {
     // First try with the user-uploaded logo
     if (companySettings.logo && companySettings.logo.trim() !== "") {
-      // Check if it's a base64 image
-      if (companySettings.logo.startsWith('data:image')) {
-        doc.addImage(companySettings.logo, 'AUTO', margin, currentY, 50, 20);
-      } else {
-        // Assume it's a URL
-        doc.addImage(companySettings.logo, 'AUTO', margin, currentY, 50, 20);
-      }
+      doc.addImage(companySettings.logo, 'AUTO', margin, currentY, 50, 20);
     } else {
       // If no logo, use default
       throw new Error("No logo found, using default");
@@ -155,7 +147,7 @@ export function addClientSection(
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(10);
   
-  // Set font to bold for customer name and address
+  // Set font to bold for customer name
   doc.setFont("helvetica", "bold");
   
   // Add the customer name first
@@ -319,12 +311,13 @@ export function addInvoiceTable(
     doc.text(taxAmount, pageWidth - margin - 5, itemsEndY, { align: "right" });
   }
   
-  // Add discount row if applicable
+  // Add discount row if applicable - calculate discount amount like in InvoiceDetails
   if (invoice.discount && invoice.discount > 0) {
     itemsEndY += 10;
     doc.text("DISCOUNT", margin + 5, itemsEndY);
-    const discountAmount = "-" + formatCurrency(invoice.discount, invoice.currency as CurrencyCode);
-    doc.text(discountAmount, pageWidth - margin - 5, itemsEndY, { align: "right" });
+    const discountAmount = invoice.subtotal * (invoice.discount / 100);
+    const discountAmountFormatted = "-" + formatCurrency(discountAmount, invoice.currency as CurrencyCode);
+    doc.text(discountAmountFormatted, pageWidth - margin - 5, itemsEndY, { align: "right" });
   }
   
   doc.setFont("helvetica", "normal");
@@ -423,19 +416,11 @@ export function addPaymentSection(
   // Get stamp URL with fallback
   const defaultStampUrl = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
   
-  console.log("Stamp URL in PDF:", companySettings.stamp || defaultStampUrl);
-  
   // Add stamp if available
   try {
     // First try with the user-uploaded stamp
     if (companySettings.stamp && companySettings.stamp.trim() !== "") {
-      // Check if it's a base64 image
-      if (companySettings.stamp.startsWith('data:image')) {
-        doc.addImage(companySettings.stamp, 'AUTO', pageWidth - margin - 70, currentY + 20, 35, 35);
-      } else {
-        // Assume it's a URL
-        doc.addImage(companySettings.stamp, 'AUTO', pageWidth - margin - 70, currentY + 20, 35, 35);
-      }
+      doc.addImage(companySettings.stamp, 'AUTO', pageWidth - margin - 70, currentY + 20, 35, 35);
     } else {
       // If no stamp, use default
       throw new Error("No stamp found, using default");
@@ -505,15 +490,12 @@ export function addFooterSection(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   
-  // Use invoice notes if available, otherwise fallback to settings notes
+  // Parse and use invoice notes properly - matching InvoiceDetails.tsx approach
   const invoiceNotes = Array.isArray(invoice.notes) 
     ? invoice.notes 
     : (typeof invoice.notes === 'string' && invoice.notes.trim() !== ''
         ? invoice.notes.split('\n').filter(note => note.trim() !== '')
-        : invoiceSettings.notes || [
-            "Upgrading the current cloud hosting service plans are extra payable as per the client requirements.",
-            "Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters."
-          ]);
+        : []);
   
   if (invoiceNotes.length > 0) {
     invoiceNotes.forEach((note, i) => {
