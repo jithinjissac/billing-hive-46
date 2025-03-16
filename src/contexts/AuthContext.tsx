@@ -70,9 +70,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
+      if (fetchError) {
         console.error("Error fetching profile:", fetchError);
         toast.error("Failed to fetch profile");
         return;
@@ -186,7 +186,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       try {
         console.log("Initializing auth...");
-        setIsLoading(true);
         const start = performance.now();
         
         const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -204,9 +203,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
         
         setAuthInitialized(true);
+        setIsLoading(false);
       } catch (error) {
         console.error("Error getting session:", error);
-      } finally {
         setIsLoading(false);
       }
     };
