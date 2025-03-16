@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Printer, Download, ArrowLeft, Edit, Eye } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoiceDetails } from "@/components/invoices/InvoiceDetails";
-import { generatePDF } from "@/utils/pdfGenerator";
+import { generatePDF } from "@/utils/pdf";
 import { dummyInvoices } from "@/data/dummyData";
 import { Invoice } from "@/types/invoice";
 import { toast } from "sonner";
