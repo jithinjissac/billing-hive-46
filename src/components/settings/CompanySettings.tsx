@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { getCompanySettings, updateCompanySettings } from "@/services/settingsService";
 
 export function CompanySettings() {
   const [companyName, setCompanyName] = useState("Techius Solutions");
@@ -14,15 +15,42 @@ export function CompanySettings() {
   const [website, setWebsite] = useState("www.techiussolutions.in");
   const [email, setEmail] = useState("info@techiussolutions.in");
   const [logo, setLogo] = useState<File | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string>("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load settings on component mount
+  useEffect(() => {
+    const settings = getCompanySettings();
+    setCompanyName(settings.name);
+    setAddress(settings.address);
+    setUamNumber(settings.uamNumber);
+    setPhone(settings.phone);
+    setWebsite(settings.website);
+    setEmail(settings.email);
+    setLogoUrl(settings.logo);
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Create new logo URL if file was uploaded
+      let newLogoUrl = logoUrl;
+      if (logo) {
+        newLogoUrl = URL.createObjectURL(logo);
+      }
+      
+      // Update settings
+      updateCompanySettings({
+        name: companyName,
+        address,
+        uamNumber,
+        phone,
+        website,
+        email,
+        logo: newLogoUrl
+      });
       
       toast.success("Company settings updated successfully");
     } catch (error) {
@@ -48,7 +76,7 @@ export function CompanySettings() {
                 />
               ) : (
                 <img 
-                  src="/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png" 
+                  src={logoUrl} 
                   alt="Company Logo" 
                   className="h-full w-full object-contain" 
                 />

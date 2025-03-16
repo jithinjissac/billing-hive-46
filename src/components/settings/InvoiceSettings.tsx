@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { ColorPicker } from "./ColorPicker";
+import { getInvoiceSettings, updateInvoiceSettings } from "@/services/settingsService";
 
 export function InvoiceSettings() {
   const [invoicePrefix, setInvoicePrefix] = useState("INV-");
@@ -18,13 +19,33 @@ export function InvoiceSettings() {
   const [template, setTemplate] = useState("modern");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Load settings on component mount
+  useEffect(() => {
+    const settings = getInvoiceSettings();
+    setInvoicePrefix(settings.invoicePrefix);
+    setDefaultDueDays(settings.defaultDueDays.toString());
+    setDefaultTaxRate(settings.defaultTaxRate.toString());
+    setDefaultNotes(settings.defaultNotes);
+    setAccentColor(settings.accentColor);
+    setFooterText(settings.footerText);
+    setTemplate(settings.template);
+  }, []);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update settings
+      updateInvoiceSettings({
+        invoicePrefix,
+        defaultDueDays: parseInt(defaultDueDays),
+        defaultTaxRate: parseInt(defaultTaxRate),
+        defaultNotes,
+        accentColor,
+        footerText,
+        template
+      });
       
       toast.success("Invoice settings updated successfully");
     } catch (error) {

@@ -3,19 +3,23 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Printer, Download, ArrowLeft, Edit } from "lucide-react";
+import { Printer, Download, ArrowLeft, Edit, Eye } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { InvoiceDetails } from "@/components/invoices/InvoiceDetails";
 import { generatePDF } from "@/utils/pdfGenerator";
 import { dummyInvoices } from "@/data/dummyData";
 import { Invoice } from "@/types/invoice";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCompanySettings } from "@/services/settingsService";
 
 const InvoiceView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("details");
+  const [pdfPreview, setPdfPreview] = useState<string | undefined>(undefined);
   
   useEffect(() => {
     // In a real app, this would be an API call
@@ -29,6 +33,10 @@ const InvoiceView = () => {
         
         if (foundInvoice) {
           setInvoice(foundInvoice);
+          
+          // Generate PDF preview
+          const preview = await generatePDF(foundInvoice);
+          setPdfPreview(preview);
         } else {
           toast.error("Invoice not found");
           navigate("/invoices");
@@ -106,11 +114,53 @@ const InvoiceView = () => {
         </div>
       </div>
       
-      <Card>
-        <CardContent className="p-6">
-          <InvoiceDetails invoice={invoice} />
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="details">
+            <span className="flex items-center">
+              <Edit className="h-4 w-4 mr-2" />
+              Invoice Details
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="preview">
+            <span className="flex items-center">
+              <Eye className="h-4 w-4 mr-2" />
+              PDF Preview
+            </span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="details">
+          <Card>
+            <CardContent className="p-6">
+              <InvoiceDetails 
+                invoice={invoice} 
+                companySettings={getCompanySettings()}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="preview">
+          <Card>
+            <CardContent className="p-6">
+              {pdfPreview ? (
+                <div className="w-full flex justify-center">
+                  <iframe
+                    src={pdfPreview}
+                    className="w-full h-[800px] border rounded"
+                    title="Invoice PDF Preview"
+                  />
+                </div>
+              ) : (
+                <div className="flex justify-center items-center h-[800px]">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </DashboardLayout>
   );
 };

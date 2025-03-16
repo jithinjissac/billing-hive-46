@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -15,9 +14,29 @@ import { Invoice } from "@/types/invoice";
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
+  companySettings?: {
+    name: string;
+    address: string;
+    uamNumber: string;
+    phone: string;
+    website: string;
+    email: string;
+    logo: string;
+  };
 }
 
-export function InvoiceDetails({ invoice }: InvoiceDetailsProps) {
+export function InvoiceDetails({ 
+  invoice, 
+  companySettings = {
+    name: "Techius Solutions",
+    address: "Mallappally, Kerala",
+    uamNumber: "KL11D0004260",
+    phone: "+91-9961560545",
+    website: "www.techiussolutions.in",
+    email: "info@techiussolutions.in",
+    logo: "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"
+  }
+}: InvoiceDetailsProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
@@ -36,7 +55,7 @@ export function InvoiceDetails({ invoice }: InvoiceDetailsProps) {
       <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
         <div>
           <img
-            src="/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png"
+            src={companySettings.logo}
             alt="Logo"
             className="h-16 w-auto"
           />
@@ -50,12 +69,12 @@ export function InvoiceDetails({ invoice }: InvoiceDetailsProps) {
         </div>
         
         <div className="text-right">
-          <div className="font-medium">Techius Solutions</div>
-          <div className="text-sm text-gray-500">Mallappally, Kerala</div>
-          <div className="text-sm text-gray-500">UAM No: KL11D0004260</div>
-          <div className="text-sm text-gray-500">Phone: +91-9961560545</div>
-          <div className="text-sm text-gray-500">Web: www.techiussolutions.in</div>
-          <div className="text-sm text-gray-500">E-mail: info@techiussolutions.in</div>
+          <div className="font-medium">{companySettings.name}</div>
+          <div className="text-sm text-gray-500">{companySettings.address}</div>
+          <div className="text-sm text-gray-500">UAM No: {companySettings.uamNumber}</div>
+          <div className="text-sm text-gray-500">Phone: {companySettings.phone}</div>
+          <div className="text-sm text-gray-500">Web: {companySettings.website}</div>
+          <div className="text-sm text-gray-500">E-mail: {companySettings.email}</div>
         </div>
       </div>
       

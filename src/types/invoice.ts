@@ -1,3 +1,4 @@
+
 export interface Customer {
   id: string;
   name: string;
@@ -26,6 +27,7 @@ export interface Invoice {
   total: number;
   notes?: string;
   discount?: number;
+  pdfPreview?: string;
   paymentDetails?: {
     accountHolder: string;
     bankName: string;
