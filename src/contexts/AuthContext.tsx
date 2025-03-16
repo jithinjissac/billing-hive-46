@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -20,7 +19,7 @@ interface AuthContextType {
   profile: Profile | null;
   signOut: () => Promise<void>;
   isLoading: boolean;
-  refreshSession: () => Promise<void>;
+  refreshSession: () => Promise<Session | null>;  // Updated return type
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
 }
 
@@ -30,7 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   signOut: async () => {},
   isLoading: true,
-  refreshSession: async () => {},
+  refreshSession: async () => null,  // Updated default value
   updateProfile: async () => {},
 });
 
