@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -59,6 +60,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
+      console.log("Profile fetched successfully:", data);
       setProfile(data);
     } catch (error) {
       console.error("Error in fetchProfile:", error);
@@ -67,15 +69,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const refreshSession = async () => {
     try {
+      console.log("Refreshing session...");
+      setIsLoading(true);
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      setSession(currentSession);
-      setUser(currentSession?.user || null);
+      
+      if (currentSession) {
+        console.log("Session refreshed successfully");
+        setSession(currentSession);
+        setUser(currentSession.user);
 
-      if (currentSession?.user) {
-        await fetchProfile(currentSession.user.id);
+        if (currentSession.user) {
+          await fetchProfile(currentSession.user.id);
+        }
+      } else {
+        console.log("No active session found");
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       }
     } catch (error) {
       console.error("Error refreshing session:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -86,6 +101,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     try {
+      console.log("Updating profile with data:", profileData);
       const { error } = await supabase
         .from('profiles')
         .update(profileData)
@@ -110,12 +126,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Get initial session
     const initializeAuth = async () => {
       try {
+        console.log("Initializing authentication...");
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        setSession(initialSession);
-        setUser(initialSession?.user || null);
+        
+        if (initialSession) {
+          console.log("Initial session found");
+          setSession(initialSession);
+          setUser(initialSession.user);
 
-        if (initialSession?.user) {
-          await fetchProfile(initialSession.user.id);
+          if (initialSession.user) {
+            await fetchProfile(initialSession.user.id);
+          }
+        } else {
+          console.log("No initial session found");
         }
       } catch (error) {
         console.error("Error getting session:", error);
@@ -130,12 +153,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log("Auth state changed:", event);
-        setSession(newSession);
-        setUser(newSession?.user || null);
         
-        if (newSession?.user) {
-          await fetchProfile(newSession.user.id);
+        if (newSession) {
+          console.log("New session established");
+          setSession(newSession);
+          setUser(newSession.user);
+          
+          if (newSession.user) {
+            await fetchProfile(newSession.user.id);
+          }
         } else {
+          console.log("Session ended");
+          setSession(null);
+          setUser(null);
           setProfile(null);
         }
         
@@ -161,11 +191,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signOut = async () => {
     try {
+      console.log("Signing out...");
+      setIsLoading(true);
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 

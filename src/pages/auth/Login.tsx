@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -16,8 +17,28 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+  
+  // Check for query parameters that indicate auth status
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    
+    if (query.get('confirmation') === 'success') {
+      toast.success("Email confirmed successfully! You can now log in.");
+    }
+    
+    if (query.get('email_change') === 'success') {
+      toast.success("Email changed successfully! Please log in with your new email.");
+    }
+    
+    // If user is already authenticated, redirect to dashboard
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [location, user, navigate]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +77,6 @@ const Login = () => {
               }
             }
           });
-          return;
         } else if (error.message.includes("Invalid login credentials")) {
           toast.error("Invalid email or password");
         } else {
@@ -65,10 +85,8 @@ const Login = () => {
         return;
       }
       
-      if (data.user) {
-        toast.success("Login successful!");
-        navigate("/dashboard");
-      }
+      // No need to redirect here as the useEffect hook will handle it
+      // once the auth state changes
     } catch (error) {
       console.error("Unexpected login error:", error);
       toast.error("An unexpected error occurred. Please try again.");
@@ -109,6 +127,7 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="h-11"
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -127,6 +146,7 @@ const Login = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="h-11 pr-10"
+                    autoComplete="current-password"
                   />
                   <Button 
                     type="button" 
@@ -134,8 +154,10 @@ const Login = () => {
                     size="icon" 
                     className="absolute right-0 top-0 h-11 w-11"
                     onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
                   </Button>
                 </div>
               </div>
@@ -143,8 +165,8 @@ const Login = () => {
             <CardFooter className="flex flex-col space-y-4">
               <Button type="submit" className="w-full h-11" disabled={isLoading}>
                 {isLoading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
