@@ -24,11 +24,27 @@ export function addHeaderSection(
   doc.setLineWidth(0.5);
   
   // Get logo with fallback
-  const logoUrl = companySettings.logo || "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+  const defaultLogoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+  
+  console.log("Company settings in PDF Generator:", companySettings);
+  console.log("Logo URL in PDF:", companySettings.logo || defaultLogoUrl);
   
   // Add company logo
   try {
-    doc.addImage(logoUrl, 'AUTO', margin, currentY, 50, 20);
+    // First try with the user-uploaded logo
+    if (companySettings.logo && companySettings.logo.trim() !== "") {
+      // Check if it's a base64 image
+      if (companySettings.logo.startsWith('data:image')) {
+        doc.addImage(companySettings.logo, 'AUTO', margin, currentY, 50, 20);
+      } else {
+        // Assume it's a URL
+        doc.addImage(companySettings.logo, 'AUTO', margin, currentY, 50, 20);
+      }
+    } else {
+      // If no logo, use default
+      throw new Error("No logo found, using default");
+    }
+    
     doc.setFontSize(10);
     doc.setTextColor(85, 85, 85); // #555
     doc.text(companySettings.slogan, margin, currentY + 25);
@@ -36,7 +52,7 @@ export function addHeaderSection(
     console.error("Could not add logo image:", error);
     // Try fallback image
     try {
-      doc.addImage("/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png", 'PNG', margin, currentY, 50, 20);
+      doc.addImage(defaultLogoUrl, 'PNG', margin, currentY, 50, 20);
     } catch (e) {
       console.error("Could not add fallback image either:", e);
     }
@@ -318,16 +334,30 @@ export function addPaymentSection(
   doc.setFont("helvetica", "normal");
   
   // Get stamp URL with fallback
-  const stampUrl = companySettings.stamp || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+  const defaultStampUrl = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+  
+  console.log("Stamp URL in PDF:", companySettings.stamp || defaultStampUrl);
   
   // Add stamp if available
   try {
-    doc.addImage(stampUrl, 'AUTO', pageWidth - margin - 70, currentY + 20, 35, 35);
+    // First try with the user-uploaded stamp
+    if (companySettings.stamp && companySettings.stamp.trim() !== "") {
+      // Check if it's a base64 image
+      if (companySettings.stamp.startsWith('data:image')) {
+        doc.addImage(companySettings.stamp, 'AUTO', pageWidth - margin - 70, currentY + 20, 35, 35);
+      } else {
+        // Assume it's a URL
+        doc.addImage(companySettings.stamp, 'AUTO', pageWidth - margin - 70, currentY + 20, 35, 35);
+      }
+    } else {
+      // If no stamp, use default
+      throw new Error("No stamp found, using default");
+    }
   } catch (error) {
     console.error("Could not add stamp image:", error);
     // Try fallback
     try {
-      doc.addImage("/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png", 'PNG', pageWidth - margin - 70, currentY + 20, 35, 35);
+      doc.addImage(defaultStampUrl, 'PNG', pageWidth - margin - 70, currentY + 20, 35, 35);
     } catch (e) {
       console.error("Could not add fallback stamp either:", e);
     }

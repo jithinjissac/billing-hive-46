@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -37,11 +38,16 @@ export function InvoiceDetails({
     initialCompanySettings || getCompanySettings()
   );
   const [invoiceSettings, setInvoiceSettings] = useState(getInvoiceSettings());
+  const [logoError, setLogoError] = useState(false);
+  const [stampError, setStampError] = useState(false);
   
   useEffect(() => {
     const handleSettingsUpdate = () => {
       setCompanySettings(getCompanySettings());
       setInvoiceSettings(getInvoiceSettings());
+      // Reset error states when settings update
+      setLogoError(false);
+      setStampError(false);
     };
     
     window.addEventListener('settings-updated', handleSettingsUpdate);
@@ -75,8 +81,16 @@ export function InvoiceDetails({
   const currencySymbol = getCurrencySymbol(invoice.currency as string || "INR");
   const amountInWords = convertNumberToWords(invoice.total, invoice.currency as any || "INR");
 
-  const logoUrl = companySettings.logo || "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
-  const stampUrl = companySettings.stamp || "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+  // Get the logo and stamp from settings or use fallbacks
+  const defaultLogoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+  const defaultStampUrl = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+  
+  const logoUrl = logoError ? defaultLogoUrl : (companySettings.logo || defaultLogoUrl);
+  const stampUrl = stampError ? defaultStampUrl : (companySettings.stamp || defaultStampUrl);
+
+  console.log("Company settings in InvoiceDetails:", companySettings);
+  console.log("Logo URL:", logoUrl);
+  console.log("Stamp URL:", stampUrl);
 
   return (
     <div className="invoice-container max-w-4xl mx-auto border border-gray-200 rounded-md overflow-hidden">
@@ -89,8 +103,10 @@ export function InvoiceDetails({
             alt="Company Logo"
             className="h-20 w-auto object-contain"
             onError={(e) => {
+              console.error("Logo load error:", e);
+              setLogoError(true);
               const target = e.target as HTMLImageElement;
-              target.src = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
+              target.src = defaultLogoUrl;
             }}
           />
           <div className="text-xs text-gray-500 mt-1">{companySettings.slogan}</div>
@@ -191,8 +207,10 @@ export function InvoiceDetails({
             alt="Company Stamp"
             className="w-24 h-auto inline-block object-contain"
             onError={(e) => {
+              console.error("Stamp load error:", e);
+              setStampError(true);
               const target = e.target as HTMLImageElement;
-              target.src = "/lovable-uploads/c3b81e67-f83d-4fb7-82e4-f4a8bdc42f2a.png";
+              target.src = defaultStampUrl;
             }}
           />
         </div>
