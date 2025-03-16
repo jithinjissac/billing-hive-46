@@ -22,6 +22,7 @@ interface AuthContextType {
   isLoading: boolean;
   refreshSession: () => Promise<Session | null>;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
+  initStorageBucket: () => Promise<void>; // New function to initialize storage bucket
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -32,6 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   refreshSession: async () => null,
   updateProfile: async () => {},
+  initStorageBucket: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -47,25 +49,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   
+  // Initialize storage bucket function (exposed to components)
+  const initStorageBucket = useCallback(async () => {
+    if (!session) {
+      console.log("Cannot initialize storage bucket: No active session");
+      return;
+    }
+    
+    try {
+      console.log("Initializing storage bucket...");
+      const response = await supabase.functions.invoke("create-storage-bucket");
+      console.log("Storage bucket response:", response);
+    } catch (error) {
+      console.error("Error initializing storage bucket:", error);
+      // Don't throw an error here, just log it
+    }
+  }, [session]);
+  
   // Initialize storage bucket only once at the start
   useEffect(() => {
-    const initStorageBucket = async () => {
-      if (!session) return;
-      
-      try {
-        console.log("Initializing storage bucket...");
-        await supabase.functions.invoke("create-storage-bucket");
-        console.log("Storage bucket initialized successfully");
-      } catch (error) {
-        console.error("Error initializing storage bucket:", error);
-        // Don't throw an error here, just log it
-      }
-    };
-    
     if (session) {
       initStorageBucket();
     }
-  }, [session]);
+  }, [session, initStorageBucket]);
   
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -245,7 +251,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isLoading,
     refreshSession,
     updateProfile,
-  }), [session, user, profile, signOut, isLoading, refreshSession, updateProfile]);
+    initStorageBucket,
+  }), [session, user, profile, signOut, isLoading, refreshSession, updateProfile, initStorageBucket]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

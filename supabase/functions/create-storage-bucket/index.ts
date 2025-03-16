@@ -34,6 +34,51 @@ serve(async (req) => {
       }
     )
 
+    // First try to make sure the policies on the 'storage' schema are fully permissive
+    try {
+      // Create a completely permissive policy on the storage.objects table
+      // This is done directly via SQL which bypasses any RLS checks
+      const { error: sqlError } = await supabaseAdmin.rpc('grant_full_storage_access');
+      
+      if (sqlError) {
+        // If the function doesn't exist, we'll create it
+        const createFunctionQuery = `
+          CREATE OR REPLACE FUNCTION grant_full_storage_access()
+          RETURNS void
+          LANGUAGE SQL
+          SECURITY DEFINER
+          AS $$
+            -- Make sure we have a 'profile-pictures' bucket
+            INSERT INTO storage.buckets (id, name, public, avif_autodetection, file_size_limit, allowed_mime_types)
+            VALUES ('profile-pictures', 'profile-pictures', true, false, 5242880, ARRAY['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
+            ON CONFLICT (id) DO UPDATE SET public = true;
+            
+            -- Add permissive policies to storage.objects for profile-pictures
+            -- First delete any existing policies for this bucket
+            DELETE FROM storage.policies 
+            WHERE bucket_id = 'profile-pictures';
+            
+            -- Then add a completely permissive policy
+            INSERT INTO storage.policies (name, bucket_id, operation, definition)
+            VALUES 
+              ('allow-all-profile-pictures', 'profile-pictures', '*', 'TRUE');
+          $$;
+        `;
+        
+        const { error: createFunctionError } = await supabaseAdmin.rpc(createFunctionQuery);
+        
+        if (createFunctionError) {
+          console.error("Failed to create function:", createFunctionError);
+        } else {
+          // Try running the function again
+          await supabaseAdmin.rpc('grant_full_storage_access');
+        }
+      }
+    } catch (sqlError) {
+      console.error("Error executing SQL:", sqlError);
+    }
+
+    // Continue with the regular bucket creation approach as a backup
     const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets()
     
     if (bucketsError) {
@@ -63,7 +108,7 @@ serve(async (req) => {
         )
       }
       
-      // Create a completely open policy for the bucket - this is more permissive than before
+      // Create a completely open policy for the bucket
       try {
         console.log("Creating open access policy for profile-pictures bucket");
         

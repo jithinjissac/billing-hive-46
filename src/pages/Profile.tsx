@@ -1,3 +1,4 @@
+
 import { useState, useEffect, ChangeEvent, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -89,8 +90,16 @@ const Profile = () => {
     }
     
     try {
+      // First, ensure the storage bucket is initialized with proper permissions
+      await initStorageBucket();
+      
+      // Short delay to ensure bucket policies are applied
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      
+      console.log("Attempting to upload file:", fileName);
       
       const { error: uploadError, data } = await supabase.storage
         .from('profile-pictures')
