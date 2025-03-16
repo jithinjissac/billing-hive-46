@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Customer } from "@/types/invoice";
 import { toast } from "sonner";
-import { dummyCustomers } from "@/data/dummyData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CustomerDialogProps {
   open: boolean;
@@ -43,7 +43,7 @@ export function CustomerDialog({
     }
   }, [open, customer]);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -55,15 +55,56 @@ export function CustomerDialog({
         phone,
         address
       };
-      
-      if (onSubmit) {
+
+      // If it's an edit operation and onSubmit is provided
+      if (customer && onSubmit) {
+        // Update existing customer in Supabase
+        const { error: updateError } = await supabase
+          .from('customers')
+          .update({
+            name: customerData.name,
+            email: customerData.email,
+            phone: customerData.phone,
+            address: customerData.address
+          })
+          .eq('id', customerData.id);
+
+        if (updateError) {
+          console.error("Error updating customer:", updateError);
+          toast.error("Failed to update customer");
+          return;
+        }
+        
+        toast.success("Customer updated successfully");
         onSubmit(customerData);
-      } else {
-        // Add to dummy data (in real app, this would be an API call)
-        dummyCustomers.push(customerData);
+      } 
+      // If it's a new customer
+      else {
+        // Insert new customer to Supabase
+        const { error: insertError } = await supabase
+          .from('customers')
+          .insert({
+            id: customerData.id,
+            name: customerData.name,
+            email: customerData.email,
+            phone: customerData.phone,
+            address: customerData.address
+          });
+
+        if (insertError) {
+          console.error("Error adding customer:", insertError);
+          toast.error("Failed to add customer");
+          return;
+        }
+        
         toast.success("Customer added successfully");
-        onOpenChange(false);
+        
+        if (onSubmit) {
+          onSubmit(customerData);
+        }
       }
+      
+      onOpenChange(false);
     } catch (error) {
       console.error("Error saving customer:", error);
       toast.error("An error occurred while saving customer");

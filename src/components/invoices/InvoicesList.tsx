@@ -25,14 +25,24 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice } from "@/types/invoice";
 
-export function InvoicesList() {
+interface InvoicesListProps {
+  searchQuery?: string;
+  statusFilter?: string;
+}
+
+export function InvoicesList({ searchQuery = "", statusFilter = "all" }: InvoicesListProps) {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     fetchInvoices();
   }, []);
+  
+  useEffect(() => {
+    applyFilters();
+  }, [searchQuery, statusFilter, invoices]);
   
   const fetchInvoices = async () => {
     try {
@@ -66,6 +76,7 @@ export function InvoicesList() {
         currency: inv.currency,
         notes: inv.notes,
         items: [], // Add the missing items property as an empty array
+        discount: Number(inv.discount) || 0,
         customer: {
           id: inv.customers.id,
           name: inv.customers.name,
@@ -82,6 +93,27 @@ export function InvoicesList() {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const applyFilters = () => {
+    let filtered = [...invoices];
+    
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(invoice => invoice.status === statusFilter);
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(invoice => 
+        invoice.invoiceNumber.toLowerCase().includes(query) ||
+        invoice.customer.name.toLowerCase().includes(query) ||
+        formatCurrency(invoice.total, invoice.currency).toLowerCase().includes(query)
+      );
+    }
+    
+    setFilteredInvoices(filtered);
   };
   
   const handleDownloadPDF = async (invoice: any) => {
@@ -142,6 +174,8 @@ export function InvoicesList() {
     }
   };
   
+  const invoicesToDisplay = filteredInvoices.length > 0 ? filteredInvoices : invoices;
+  
   return (
     <div className="border rounded-md">
       <Table>
@@ -164,14 +198,14 @@ export function InvoicesList() {
                 </div>
               </TableCell>
             </TableRow>
-          ) : invoices.length === 0 ? (
+          ) : invoicesToDisplay.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center h-24">
                 No invoices found
               </TableCell>
             </TableRow>
           ) : (
-            invoices.map((invoice) => (
+            invoicesToDisplay.map((invoice) => (
               <TableRow key={invoice.id}>
                 <TableCell className="font-medium">
                   {invoice.invoiceNumber}
