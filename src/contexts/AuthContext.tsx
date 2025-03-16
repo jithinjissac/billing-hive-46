@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { supabase, createPublicBucket } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -22,6 +21,7 @@ interface AuthContextType {
   isLoading: boolean;
   refreshSession: () => Promise<Session | null>;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
+  removeProfilePicture: () => Promise<void>;
   initStorageBucket: () => Promise<any>; // Function to initialize storage bucket
 }
 
@@ -33,6 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   refreshSession: async () => null,
   updateProfile: async () => {},
+  removeProfilePicture: async () => {},
   initStorageBucket: async () => {},
 });
 
@@ -65,7 +66,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
   
-  // Initialize storage bucket when authenticated
   useEffect(() => {
     const initBucket = async () => {
       if (session && !bucketInitialized) {
@@ -186,6 +186,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, [user, fetchProfile]);
 
+  const removeProfilePicture = useCallback(async () => {
+    if (!user || !profile?.profile_picture_url) {
+      return;
+    }
+
+    try {
+      console.log("Removing profile picture...");
+      
+      const profilePicturePath = profile.profile_picture_url.split('/').pop();
+      
+      if (!profilePicturePath) {
+        toast.error("Could not determine profile picture path");
+        return;
+      }
+      
+      const { error: storageError } = await supabase
+        .storage
+        .from('profile-pictures')
+        .remove([profilePicturePath]);
+      
+      if (storageError) {
+        console.error("Error removing profile picture from storage:", storageError);
+        toast.error("Failed to remove profile picture from storage");
+        return;
+      }
+      
+      await updateProfile({ profile_picture_url: null });
+      
+      toast.success("Profile picture removed successfully");
+    } catch (error) {
+      console.error("Error in removeProfilePicture:", error);
+      toast.error("An error occurred while removing profile picture");
+    }
+  }, [user, profile, updateProfile]);
+
   useEffect(() => {
     const initializeAuth = async () => {
       if (authInitialized) return;
@@ -256,8 +291,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isLoading,
     refreshSession,
     updateProfile,
+    removeProfilePicture,
     initStorageBucket,
-  }), [session, user, profile, signOut, isLoading, refreshSession, updateProfile, initStorageBucket]);
+  }), [session, user, profile, signOut, isLoading, refreshSession, updateProfile, removeProfilePicture, initStorageBucket]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

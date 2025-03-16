@@ -27,8 +27,7 @@ export const createPublicBucket = async (bucketName: string) => {
       if (bucketExists) {
         console.log(`Bucket ${bucketName} already exists, updating permissions...`);
         
-        // Try to update policies directly - removed getPolicies and createPolicy calls
-        // which don't exist on StorageFileApi
+        // Try to update bucket directly
         try {
           // Update existing bucket to ensure it's public
           await supabase.storage.updateBucket(bucketName, {
@@ -53,7 +52,6 @@ export const createPublicBucket = async (bucketName: string) => {
           });
           
           if (!createError) {
-            // Removed createPolicy call which doesn't exist on StorageFileApi
             console.log(`Successfully created public bucket ${bucketName}`);
             return { success: true, message: `Bucket ${bucketName} created successfully` };
           }

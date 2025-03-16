@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, UserX } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
@@ -19,10 +18,9 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, profile, removeProfilePicture } = useAuth();
   const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
   
-  // Check for query parameters that indicate auth status
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     
@@ -34,7 +32,6 @@ const Login = () => {
       toast.success("Email changed successfully! Please log in with your new email.");
     }
     
-    // If user is already authenticated, redirect to dashboard
     if (user) {
       navigate('/dashboard');
     }
@@ -94,6 +91,92 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+  
+  const handleRemoveProfilePicture = async () => {
+    try {
+      await removeProfilePicture();
+      toast.success("Profile picture removed");
+    } catch (error) {
+      console.error("Error removing profile picture:", error);
+      toast.error("Failed to remove profile picture");
+    }
+  };
+  
+  if (user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <img
+              src={logoUrl}
+              alt="TechiusPay Logo"
+              className="h-16 w-auto mx-auto mb-3"
+            />
+            <h1 className="text-2xl font-bold text-gray-800">TechiusPay</h1>
+            <p className="text-sm text-muted-foreground">You are already signed in</p>
+          </div>
+          
+          <Card className="shadow-lg border-gray-200">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-xl text-center">Account Options</CardTitle>
+              <CardDescription className="text-center">
+                Manage your account settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center">
+                {profile?.profile_picture_url && (
+                  <div className="mb-4 flex flex-col items-center">
+                    <img 
+                      src={profile.profile_picture_url} 
+                      alt="Profile" 
+                      className="h-20 w-20 rounded-full object-cover border border-gray-200" 
+                    />
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={handleRemoveProfilePicture}
+                      className="mt-2 flex items-center"
+                    >
+                      <UserX className="h-4 w-4 mr-2" />
+                      Remove Picture
+                    </Button>
+                  </div>
+                )}
+                <p className="text-sm text-gray-600">
+                  Signed in as: <span className="font-semibold">{user.email}</span>
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-2">
+              <Button 
+                variant="default" 
+                className="w-full" 
+                onClick={() => navigate('/dashboard')}
+              >
+                Go to Dashboard
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => navigate('/profile')}
+              >
+                Edit Profile
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <div className="text-center mt-8">
+            <Button variant="ghost" asChild>
+              <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+                Back to Home
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
