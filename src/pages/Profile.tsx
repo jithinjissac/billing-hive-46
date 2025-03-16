@@ -13,7 +13,7 @@ import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Profile = () => {
-  const { user, profile, updateProfile, isLoading: authLoading } = useAuth();
+  const { user, profile, updateProfile, refreshSession, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -24,8 +24,26 @@ const Profile = () => {
     position: "",
   });
 
+  // Fetch the most current profile data when component mounts
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (user && !profile) {
+        try {
+          console.log("Manually refreshing session to load profile data");
+          await refreshSession();
+        } catch (error) {
+          console.error("Error refreshing session:", error);
+        }
+      }
+    };
+    
+    loadProfileData();
+  }, [user, profile, refreshSession]);
+
+  // Update form when profile data changes
   useEffect(() => {
     if (profile) {
+      console.log("Profile data loaded into form:", profile);
       setFormData({
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
@@ -71,6 +89,7 @@ const Profile = () => {
     return user?.email?.[0].toUpperCase() || "?";
   }, [formData.first_name, formData.last_name, user]);
 
+  // Display loading state while auth is loading
   if (authLoading) {
     return (
       <DashboardLayout>
