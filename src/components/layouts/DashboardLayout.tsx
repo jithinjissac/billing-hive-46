@@ -62,7 +62,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   // Force render the dashboard even if profile is not loaded yet
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
           <div className="flex items-center">
             <img 
@@ -78,7 +78,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-[280px] max-w-full">
+            <SheetContent side="left" className="p-0 w-[280px] max-w-full flex flex-col">
               <Sidebar 
                 showCloseButton={true} 
                 onClose={closeSidebar} 
@@ -87,7 +87,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </SheetContent>
           </Sheet>
         </div>
-        <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 overflow-x-hidden">
+        <main className="flex-1 container mx-auto px-3 sm:px-4 py-4 sm:py-6 overflow-x-hidden">
           {children}
         </main>
       </div>
@@ -95,9 +95,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   }
   
   return (
-    <div className="flex min-h-screen bg-gray-50 overflow-hidden">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar userProfile={profile} />
-      <main className="flex-1 overflow-auto p-4 sm:p-6 max-w-full">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 max-w-full">
         <div className="container mx-auto">
           {children}
         </div>

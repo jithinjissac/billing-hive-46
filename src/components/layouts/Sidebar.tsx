@@ -77,7 +77,7 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex h-screen border-r bg-white flex-col min-w-[220px] overflow-hidden">
+      <div className="hidden lg:flex flex-col border-r bg-white h-screen overflow-hidden min-w-[220px] sticky top-0">
         <div className="flex h-14 items-center px-4 border-b">
           <Link
             to={user ? "/dashboard" : "/"}
@@ -110,7 +110,7 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
         </ScrollArea>
         
         {user && (
-          <div className="p-3 border-t">
+          <div className="p-3 border-t mt-auto">
             <div className="flex items-center justify-between p-2">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
@@ -158,7 +158,7 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
       
       {/* Mobile Sidebar Content */}
       {showCloseButton && (
-        <div className="lg:hidden overflow-hidden">
+        <div className="lg:hidden flex flex-col flex-1 overflow-hidden">
           <ScrollArea className="flex-1 p-3">
             <nav className="grid items-start gap-2">
               {routes.map((route) => (
@@ -178,7 +178,7 @@ export function Sidebar({ showCloseButton = false, onClose, userProfile }: Sideb
           </ScrollArea>
           
           {user && (
-            <div className="p-3 border-t">
+            <div className="p-3 border-t mt-auto">
               <div className="flex items-center justify-between p-2">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
