@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,11 +153,17 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
       }
       
       if (data && data.notes) {
+        console.log("Available notes from settings:", data.notes);
         setAvailableNotes(data.notes);
         
         // If we have existing notes from invoice data, parse them and set as selected
         if (invoiceData?.notes) {
-          const invoiceNoteLines = invoiceData.notes.split('\n').filter(note => note.trim() !== '');
+          console.log("Existing invoice notes:", invoiceData.notes);
+          const invoiceNoteLines = typeof invoiceData.notes === 'string' 
+            ? invoiceData.notes.split('\n').filter(note => note.trim() !== '')
+            : [];
+          
+          console.log("Parsed note lines:", invoiceNoteLines);
           setSelectedNotes(invoiceNoteLines);
         } else {
           // Otherwise, don't select any notes by default
@@ -246,6 +253,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting, editMode = false,
     
     // Join selected notes into a string
     const notesText = selectedNotes.join('\n');
+    console.log("Submitting notes:", notesText);
     
     const finalInvoiceData: Invoice = {
       id: invoiceData?.id || crypto.randomUUID(),

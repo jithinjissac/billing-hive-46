@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -162,7 +161,9 @@ export function InvoiceDetails({
           {invoice.items.map((item) => (
             item.quantity > 0 ? (
               <TableRow key={item.id}>
-                <TableCell className="align-top font-medium">{item.name || 'Unnamed Item'}</TableCell>
+                <TableCell className="align-top font-medium">
+                  {item.name || 'Unnamed Item'}
+                </TableCell>
                 <TableCell className="align-top">
                   {item.description}
                   {item.specs && item.specs.length > 0 ? (

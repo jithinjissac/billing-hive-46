@@ -152,12 +152,16 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
       let itemY = y + (i * 30);
       doc.setFontSize(11);
       
+      // Add item name
+      const itemName = item.name || 'Unnamed Item';
+      doc.text(itemName, margin + 5, itemY);
+      
       // Handle item description with word wrap
       itemY = addWrappedText(
         doc,
         item.description,
-        margin + 5,
-        itemY,
+        pageWidth / 2 - 10,
+        y + (i * 30),
         contentWidth / 3 - 10
       );
       
@@ -166,10 +170,10 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
         doc.setFontSize(10);
         doc.setTextColor(102, 102, 102); // #666
         
-        let specsY = y + (i * 30);
+        let specsY = y + (i * 30) + 5;
         item.specs.forEach((spec) => {
-          specsY += 5;
           doc.text(`• ${spec}`, pageWidth / 2 - 10, specsY);
+          specsY += 5;
         });
       }
       

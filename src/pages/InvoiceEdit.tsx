@@ -79,7 +79,7 @@ const InvoiceEdit = () => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
             id: item.id,
-            name: item.name || "",
+            name: item.name || "", // Ensure we always have a name value, even if empty
             description: item.description,
             quantity: item.quantity,
             price: Number(item.price),
@@ -88,6 +88,10 @@ const InvoiceEdit = () => {
         });
         
         let status = invoiceData.status;
+        
+        // Parse notes if they exist
+        const notesFromDb = invoiceData.notes || '';
+        console.log("Notes from DB:", notesFromDb);
         
         const fullInvoice: Invoice = {
           id: invoiceData.id,
@@ -106,7 +110,7 @@ const InvoiceEdit = () => {
           subtotal: Number(invoiceData.subtotal),
           tax: Number(invoiceData.tax),
           total: Number(invoiceData.total),
-          notes: invoiceData.notes || '',
+          notes: notesFromDb,
           currency: invoiceData.currency,
           discount: invoiceData.discount || 0,
           paymentDetails: paymentData ? {
@@ -119,6 +123,7 @@ const InvoiceEdit = () => {
         };
         
         setInvoice(fullInvoice);
+        console.log("Loaded invoice:", fullInvoice);
       } catch (error) {
         console.error("Error fetching invoice:", error);
         toast.error("Failed to load invoice");
@@ -137,6 +142,8 @@ const InvoiceEdit = () => {
       setIsSubmitting(true);
       
       const status = updatedInvoice.status;
+      
+      console.log("Saving invoice with notes:", updatedInvoice.notes);
       
       // Make sure the notes field is included in the update
       const { error: invoiceError } = await supabase
@@ -176,6 +183,7 @@ const InvoiceEdit = () => {
       for (const item of updatedInvoice.items) {
         // Ensure item name is never empty or undefined
         const itemName = item.name || "Unnamed Item";
+        console.log("Saving item with name:", itemName);
         
         const { data: newItem, error: itemError } = await supabase
           .from('invoice_items')
