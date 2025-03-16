@@ -37,7 +37,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
   const [customerId, setCustomerId] = useState(invoice?.customer.id || "");
   const [date, setDate] = useState(invoice?.date || new Date().toISOString().substring(0, 10));
   const [dueDate, setDueDate] = useState(invoice?.dueDate || getDefaultDueDate());
-  const [status, setStatus] = useState(invoice?.status || "pending");
+  const [status, setStatus] = useState<"draft" | "pending" | "paid" | "overdue">(invoice?.status || "pending");
   const [items, setItems] = useState<InvoiceItem[]>(invoice?.items || [
     { id: crypto.randomUUID(), description: "", quantity: 1, price: 0 }
   ]);
@@ -122,6 +122,13 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
     onSubmit(invoiceData);
   };
   
+  // Type guard to ensure value is a valid status
+  const handleStatusChange = (value: string) => {
+    if (value === "draft" || value === "pending" || value === "paid" || value === "overdue") {
+      setStatus(value);
+    }
+  };
+  
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -159,7 +166,7 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
           <Label htmlFor="status">Status</Label>
           <Select
             value={status}
-            onValueChange={setStatus}
+            onValueChange={handleStatusChange}
           >
             <SelectTrigger id="status">
               <SelectValue />
@@ -317,3 +324,4 @@ export function InvoiceForm({ invoice, onSubmit, isSubmitting }: InvoiceFormProp
     </form>
   );
 }
+
