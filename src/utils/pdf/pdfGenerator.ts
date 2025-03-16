@@ -68,7 +68,7 @@ export async function generatePDF(invoice: Invoice, autoDownload: boolean = fals
     positions.currentY = addPaymentSection(doc, invoice, companySettings, positions);
     
     // Generate footer section
-    addFooterSection(doc, invoiceSettings, positions);
+    addFooterSection(doc, invoice, invoiceSettings, positions);
     
     // Save the PDF for download if requested
     if (autoDownload) {
