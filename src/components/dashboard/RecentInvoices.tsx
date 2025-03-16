@@ -9,14 +9,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function RecentInvoices() {
   const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     let isMounted = true;
+    let timeout: number;
     
     const fetchRecentInvoices = async () => {
       try {
         if (!isMounted) return;
         setIsLoading(true);
+        setError(null);
+        
+        // Set a timeout to prevent infinite loading
+        timeout = window.setTimeout(() => {
+          if (isMounted && isLoading) {
+            console.warn("RecentInvoices fetch timeout - forcing completion");
+            setIsLoading(false);
+          }
+        }, 5000);
         
         const { data, error } = await supabase
           .from('invoices')
@@ -40,7 +51,14 @@ export function RecentInvoices() {
         }
       } catch (error) {
         console.error("Error fetching recent invoices:", error);
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setError("Failed to load recent invoices");
+          setIsLoading(false);
+        }
+      } finally {
+        if (isMounted) {
+          clearTimeout(timeout);
+        }
       }
     };
     
@@ -49,6 +67,7 @@ export function RecentInvoices() {
     // Cleanup function
     return () => {
       isMounted = false;
+      clearTimeout(timeout);
     };
   }, []);
   
@@ -71,6 +90,20 @@ export function RecentInvoices() {
     );
   }
   
+  if (error) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-red-500 mb-2">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="text-sm text-blue-500 hover:underline"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-4">
       {recentInvoices.length === 0 ? (
@@ -87,7 +120,7 @@ export function RecentInvoices() {
             <div className="flex flex-col">
               <span className="font-medium">#{invoice.invoice_number}</span>
               <span className="text-sm text-muted-foreground">
-                {invoice.customers?.name}
+                {invoice.customers?.name || 'Unknown Customer'}
               </span>
             </div>
             <div className="flex items-center gap-2">

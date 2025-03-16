@@ -15,19 +15,51 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isMobile = useIsMobile();
   const logoUrl = "/lovable-uploads/5222bf6a-5b4c-403b-ac0f-8208640df06d.png";
-  const { user, isLoading, profile } = useAuth();
+  const { user, isLoading, profile, refreshSession } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [localLoading, setLocalLoading] = useState(true);
   
-  // Redirect if user is not authenticated
+  // Attempt to refresh session if needed and redirect if not authenticated
   useEffect(() => {
-    if (!isLoading && !user) {
-      navigate('/auth/login');
-    }
-  }, [user, isLoading, navigate]);
+    const checkAuth = async () => {
+      setLocalLoading(true);
+      
+      try {
+        // If we're already loading from auth context, wait for that to complete
+        if (isLoading) {
+          return;
+        }
+        
+        if (!user) {
+          console.log("No user found, redirecting to login");
+          navigate('/auth/login');
+          return;
+        }
+      } finally {
+        // Always set loading to false after a short delay to prevent flash
+        setTimeout(() => {
+          setLocalLoading(false);
+        }, 100);
+      }
+    };
+    
+    checkAuth();
+  }, [user, isLoading, navigate, refreshSession]);
   
   const closeSidebar = () => setSidebarOpen(false);
   
+  // Show loading spinner only for a short time to prevent getting stuck
+  if (localLoading && isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="ml-3 text-sm text-gray-500">Loading dashboard...</p>
+      </div>
+    );
+  }
+  
+  // Force render the dashboard even if profile is not loaded yet
   if (isMobile) {
     return (
       <div className="min-h-screen bg-gray-50">

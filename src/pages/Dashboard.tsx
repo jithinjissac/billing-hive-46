@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState({
     totalInvoices: 0,
     paidInvoices: 0,
@@ -22,11 +23,21 @@ const Dashboard = () => {
   
   useEffect(() => {
     let isMounted = true;
+    let timeout: number;
     
     const fetchDashboardData = async () => {
       try {
         if (!isMounted) return;
         setIsLoading(true);
+        setDataError(null);
+        
+        // Set a timeout to prevent infinite loading state
+        timeout = window.setTimeout(() => {
+          if (isMounted && isLoading) {
+            console.error("Dashboard data fetch timeout - forcing load completion");
+            setIsLoading(false);
+          }
+        }, 5000);
         
         // Fetch all invoices with a more efficient query
         const { data: invoices, error } = await supabase
@@ -34,7 +45,13 @@ const Dashboard = () => {
           .select('status')
           .limit(1000);
         
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching dashboard data:", error);
+          if (isMounted) {
+            setDataError("Failed to load dashboard data. Please try again.");
+          }
+          return;
+        }
         
         if (isMounted) {
           // Calculate dashboard metrics
@@ -49,12 +66,17 @@ const Dashboard = () => {
             pendingInvoices: pendingCount,
             overdueInvoices: overdueCount
           });
-          
-          setIsLoading(false);
         }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setDataError("An unexpected error occurred. Please try again.");
+        }
+      } finally {
+        if (isMounted) {
+          clearTimeout(timeout);
+          setIsLoading(false);
+        }
       }
     };
     
@@ -62,6 +84,7 @@ const Dashboard = () => {
     
     return () => {
       isMounted = false;
+      clearTimeout(timeout);
     };
   }, []);
   
@@ -90,6 +113,17 @@ const Dashboard = () => {
       />
     </div>
   ), [dashboardData, isLoading]);
+  
+  if (dataError) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[50vh]">
+          <p className="text-lg text-red-500 mb-4">{dataError}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
   
   return (
     <DashboardLayout>

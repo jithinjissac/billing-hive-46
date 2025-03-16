@@ -23,17 +23,47 @@ interface MonthlyData {
 export function InvoiceStats() {
   const [chartData, setChartData] = useState<MonthlyData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
+    let isMounted = true;
+    let timeout: number;
+    
     const fetchInvoiceStats = async () => {
       try {
         setIsLoading(true);
+        setError(null);
+        
+        // Set a timeout to prevent infinite loading
+        timeout = window.setTimeout(() => {
+          if (isMounted && isLoading) {
+            console.warn("InvoiceStats fetch timeout reached - forcing completion");
+            
+            // Initialize with empty data if the fetch takes too long
+            const emptyData: MonthlyData[] = [];
+            for (let i = 5; i >= 0; i--) {
+              const date = new Date();
+              date.setMonth(date.getMonth() - i);
+              const monthName = date.toLocaleString('default', { month: 'short' });
+              
+              emptyData.push({
+                month: monthName,
+                paid: 0,
+                pending: 0,
+                overdue: 0
+              });
+            }
+            
+            setChartData(emptyData);
+            setIsLoading(false);
+          }
+        }, 5000);
         
         const { data: invoices, error } = await supabase
           .from('invoices')
           .select('date, status, total')
           .order('date', { ascending: false })
-          .limit(500); // Limit the query for better performance
+          .limit(100); // Reduced limit for better performance
           
         if (error) throw error;
         
@@ -60,35 +90,53 @@ export function InvoiceStats() {
         
         // Fill in the data
         invoices?.forEach(invoice => {
-          const invoiceDate = new Date(invoice.date);
-          // Only include invoices from current year
-          if (invoiceDate.getFullYear() === currentYear) {
-            const monthKey = `${invoiceDate.getFullYear()}-${(invoiceDate.getMonth() + 1).toString().padStart(2, '0')}`;
-            
-            if (monthlyData[monthKey]) {
-              if (invoice.status === 'paid') {
-                monthlyData[monthKey].paid += Number(invoice.total);
-              } else if (invoice.status === 'pending') {
-                monthlyData[monthKey].pending += Number(invoice.total);
-              } else if (invoice.status === 'overdue') {
-                monthlyData[monthKey].overdue += Number(invoice.total);
+          try {
+            const invoiceDate = new Date(invoice.date);
+            // Only include invoices from current year
+            if (invoiceDate.getFullYear() === currentYear) {
+              const monthKey = `${invoiceDate.getFullYear()}-${(invoiceDate.getMonth() + 1).toString().padStart(2, '0')}`;
+              
+              if (monthlyData[monthKey]) {
+                if (invoice.status === 'paid') {
+                  monthlyData[monthKey].paid += Number(invoice.total) || 0;
+                } else if (invoice.status === 'pending') {
+                  monthlyData[monthKey].pending += Number(invoice.total) || 0;
+                } else if (invoice.status === 'overdue') {
+                  monthlyData[monthKey].overdue += Number(invoice.total) || 0;
+                }
               }
             }
+          } catch (err) {
+            console.error("Error processing invoice:", err);
           }
         });
         
         // Convert to array for chart
         const chartDataArray = Object.values(monthlyData);
         
-        setChartData(chartDataArray);
+        if (isMounted) {
+          setChartData(chartDataArray);
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error("Error fetching invoice stats:", error);
+        if (isMounted) {
+          setError("Failed to load chart data");
+          setIsLoading(false);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          clearTimeout(timeout);
+        }
       }
     };
 
     fetchInvoiceStats();
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
   }, []);
   
   // Memoize the chart to prevent re-renders
@@ -97,6 +145,22 @@ export function InvoiceStats() {
       return (
         <div className="h-[300px] w-full flex items-center justify-center">
           <Skeleton className="h-full w-full" />
+        </div>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="h-[300px] w-full flex items-center justify-center">
+          <p className="text-red-500">{error}</p>
+        </div>
+      );
+    }
+    
+    if (chartData.length === 0) {
+      return (
+        <div className="h-[300px] w-full flex items-center justify-center">
+          <p className="text-muted-foreground">No invoice data available</p>
         </div>
       );
     }
@@ -139,7 +203,7 @@ export function InvoiceStats() {
         </ResponsiveContainer>
       </div>
     );
-  }, [chartData, isLoading]);
+  }, [chartData, isLoading, error]);
   
   return chartComponent;
 }

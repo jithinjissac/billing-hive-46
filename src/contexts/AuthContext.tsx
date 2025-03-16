@@ -45,8 +45,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   
-  // Initialize storage bucket on load
+  // Initialize storage bucket on load - do only once
   useEffect(() => {
     const initStorageBucket = async () => {
       try {
@@ -62,6 +63,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Memoize the fetchProfile function to prevent unnecessary re-renders
   const fetchProfile = useCallback(async (userId: string) => {
     try {
+      if (!userId) return;
+      
       console.log(`Fetching profile for user: ${userId}`);
       const start = performance.now();
       
@@ -84,6 +87,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.log("Profile data set:", data);
       } else {
         console.log("No profile found for user:", userId);
+        // Create an empty profile if none exists
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({ id: userId })
+          .select()
+          .single();
+          
+        if (insertError) {
+          console.error("Error creating profile:", insertError);
+        } else {
+          // Fetch the profile again after creating it
+          await fetchProfile(userId);
+        }
       }
     } catch (error) {
       console.error("Error in fetchProfile:", error);
@@ -113,8 +129,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(null);
         setProfile(null);
       }
+      
+      return currentSession;
     } catch (error) {
       console.error("Error refreshing session:", error);
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -154,10 +173,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [user, fetchProfile]);
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session - only once
     const initializeAuth = async () => {
+      if (authInitialized) return;
+      
       try {
         console.log("Initializing auth...");
+        setIsLoading(true);
         const start = performance.now();
         
         const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -173,6 +195,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             await fetchProfile(initialSession.user.id);
           }
         }
+        
+        setAuthInitialized(true);
       } catch (error) {
         console.error("Error getting session:", error);
       } finally {
@@ -201,6 +225,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
         
         setIsLoading(false);
+        setAuthInitialized(true);
         
         // Show appropriate toast messages based on auth events
         if (event === 'SIGNED_IN') {
@@ -218,7 +243,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, authInitialized]);
 
   const signOut = useCallback(async () => {
     try {
