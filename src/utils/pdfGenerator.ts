@@ -12,6 +12,45 @@ declare module "jspdf" {
 }
 
 /**
+ * Convert a number to words for Indian Rupees
+ */
+function convertNumberToWords(num: number): string {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  
+  if (num === 0) return 'Zero';
+  
+  function convertLessThanOneThousand(n: number): string {
+    if (n < 20) return ones[n];
+    const digit = n % 10;
+    if (n < 100) return tens[Math.floor(n / 10)] + (digit ? ' ' + ones[digit] : '');
+    const hundred = Math.floor(n / 100);
+    return ones[hundred] + ' Hundred' + (n % 100 === 0 ? '' : ' ' + convertLessThanOneThousand(n % 100));
+  }
+  
+  let result = '';
+  const crore = Math.floor(num / 10000000);
+  const lakh = Math.floor((num % 10000000) / 100000);
+  const thousand = Math.floor((num % 100000) / 1000);
+  const remaining = num % 1000;
+  
+  if (crore > 0) {
+    result += convertLessThanOneThousand(crore) + ' Crore ';
+  }
+  if (lakh > 0) {
+    result += convertLessThanOneThousand(lakh) + ' Lakh ';
+  }
+  if (thousand > 0) {
+    result += convertLessThanOneThousand(thousand) + ' Thousand ';
+  }
+  if (remaining > 0) {
+    result += convertLessThanOneThousand(remaining);
+  }
+  
+  return result.trim() + ' Only';
+}
+
+/**
  * Generate and download a PDF for the given invoice
  */
 export async function generatePDF(invoice: Invoice): Promise<void> {
@@ -22,159 +61,235 @@ export async function generatePDF(invoice: Invoice): Promise<void> {
     format: "a4",
   });
   
-  // Document defaults
   const pageWidth = doc.internal.pageSize.width;
-  const pageHeight = doc.internal.pageSize.height;
-  const margin = 20;
+  const margin = 15;
+  const contentWidth = pageWidth - (margin * 2);
   
-  // Add header with logo and company details
-  doc.setFillColor(0, 188, 212); // #00BCD4
-  doc.rect(0, 0, pageWidth, 40, "F");
+  // Header section with logo and company details
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, pageWidth, 30, 'F');
   
-  // We can't add the actual image here, but in a real app you'd use:
-  // doc.addImage("logo_url", "PNG", margin, 10, 40, 20);
-  
-  // Add company info
-  doc.setTextColor(255, 255, 255);
+  // Add Techius Solutions header text
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("Techius Solutions", margin + 45, 18);
-  
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Mallappally, Kerala", margin + 45, 24);
-  doc.text("Phone: +91-9961560545", margin + 45, 30);
-  doc.text("Email: info@techiussolutions.in", margin + 45, 36);
-  
-  // Add invoice title and details
-  doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 136, 204); // #0088cc
   doc.setFontSize(24);
-  doc.text("INVOICE", margin, 60);
+  doc.text("TECHIUS", margin + 30, 15);
   
-  // Invoice number and dates
+  doc.setTextColor(255, 204, 0); // #ffcc00
+  doc.setFontSize(20);
+  doc.text("SOLUTIONS", margin + 30, 22);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(102, 102, 102); // #666
+  doc.text("EXPERIENCE THE DIGITAL INNOVATION", margin + 30, 28);
+  
+  // Add company details on the right
   doc.setFontSize(12);
-  doc.text("Invoice Number:", pageWidth - margin - 80, 60);
-  doc.setFont("helvetica", "normal");
-  doc.text(invoice.invoiceNumber, pageWidth - margin - 30, 60);
+  doc.setTextColor(0, 0, 0);
   
-  doc.setFont("helvetica", "bold");
-  doc.text("Date:", pageWidth - margin - 80, 68);
-  doc.setFont("helvetica", "normal");
-  doc.text(formatDate(invoice.date), pageWidth - margin - 30, 68);
+  // Right-aligned company information
+  const companyInfo = [
+    { label: "Techius Solutions,", value: " Mallappally, Kerala" },
+    { label: "UAM No:", value: " KL11D0004260" },
+    { label: "Phone :", value: " +91-9961560545" },
+    { label: "Web :", value: " www.techiussolutions.in" },
+    { label: "E-mail :", value: " info@techiussolutions.in" }
+  ];
   
-  doc.setFont("helvetica", "bold");
-  doc.text("Due Date:", pageWidth - margin - 80, 76);
-  doc.setFont("helvetica", "normal");
-  doc.text(formatDate(invoice.dueDate), pageWidth - margin - 30, 76);
+  companyInfo.forEach((item, index) => {
+    const y = 10 + (index * 5);
+    // Calculate text width for right alignment
+    const textWidth = doc.getTextWidth(item.label + item.value);
+    doc.setFont("helvetica", "bold");
+    doc.text(item.label, pageWidth - margin - textWidth, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(item.value, pageWidth - margin - textWidth + doc.getTextWidth(item.label), y);
+  });
   
-  // Status
-  doc.setFont("helvetica", "bold");
-  doc.text("Status:", pageWidth - margin - 80, 84);
+  // Add teal border line
+  doc.setDrawColor(0, 179, 179); // #00b3b3
+  doc.setLineWidth(1);
+  doc.line(margin, 30, pageWidth - margin, 30);
+  
+  // Invoice title and customer section
+  doc.setFillColor(249, 249, 249); // #f9f9f9
+  doc.rect(margin, 35, contentWidth, 35, 'F');
+  
+  doc.setTextColor(102, 102, 102); // #666
+  doc.setFontSize(28);
   doc.setFont("helvetica", "normal");
-  const status = invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1);
-  doc.text(status, pageWidth - margin - 30, 84);
+  doc.text("INVOICE", margin + 5, 45);
   
   // Bill To section
-  doc.setFillColor(0, 188, 212);
-  doc.rect(margin, 70, 40, 10, "F");
+  doc.setFillColor(0, 179, 179); // #00b3b3
+  doc.rect(margin + 5, 50, 30, 8, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("BILL TO", margin + 5, 77);
+  doc.setFont("helvetica", "bold");
+  doc.text("BILL TO", margin + 7, 56);
   
   // Customer information
   doc.setTextColor(0, 0, 0);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text(invoice.customer.name, margin, 90);
+  doc.text(invoice.customer.name, margin + 5, 65);
   
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(invoice.customer.address, margin, 97);
-  if (invoice.customer.email) {
-    doc.text(`Email: ${invoice.customer.email}`, margin, 104);
-  }
-  if (invoice.customer.phone) {
-    doc.text(`Phone: ${invoice.customer.phone}`, margin, 111);
+  doc.text(invoice.customer.address.split(',')[0], margin + 5, 70);
+  if (invoice.customer.address.includes(',')) {
+    doc.text(invoice.customer.address.split(',').slice(1).join(','), margin + 5, 75);
   }
   
-  // Invoice items table
-  const tableColumns = [
-    { header: "Item", dataKey: "description" },
-    { header: "Qty", dataKey: "quantity" },
-    { header: "Price", dataKey: "price" },
-    { header: "Amount", dataKey: "total" },
+  // Invoice details on the right
+  doc.setFont("helvetica", "bold");
+  doc.text("Date :", pageWidth - margin - 70, 45);
+  doc.setFont("helvetica", "normal");
+  doc.text(formatDate(invoice.date), pageWidth - margin - 40, 45);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Invoice No :", pageWidth - margin - 70, 52);
+  doc.setFont("helvetica", "normal");
+  doc.text(invoice.invoiceNumber, pageWidth - margin - 40, 52);
+  
+  // Invoice items section - header
+  const tableStartY = 80;
+  doc.setDrawColor(221, 221, 221); // #ddd
+  doc.setLineWidth(0.5);
+  doc.line(margin, tableStartY, pageWidth - margin, tableStartY);
+  
+  doc.setTextColor(102, 102, 102); // #666
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("ITEM", margin, tableStartY - 5);
+  doc.text("AMOUNT", pageWidth - margin - 25, tableStartY - 5, { align: "right" });
+  
+  // Items content
+  let y = tableStartY + 10;
+  
+  if (invoice.items.length > 0) {
+    // Group items if needed or show them individually
+    doc.setTextColor(0, 102, 204); // #0066cc
+    doc.setFont("helvetica", "bold");
+    doc.text("Invoice items", margin, y);
+    y += 10;
+    
+    // Individual items
+    invoice.items.forEach(item => {
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+      doc.text(item.description, margin, y);
+      doc.text(formatCurrency(item.price * item.quantity), pageWidth - margin, y, { align: "right" });
+      y += 8;
+    });
+  }
+  
+  // Draw line after items
+  y += 5;
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 10;
+  
+  // Totals section
+  doc.setFont("helvetica", "bold");
+  doc.text("TOTAL", margin, y);
+  doc.text(formatCurrency(invoice.subtotal), pageWidth - margin, y, { align: "right" });
+  
+  // Draw line
+  y += 5;
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 10;
+  
+  // Tax (displaying as discount in this template)
+  doc.text("DISCOUNT", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(formatCurrency(invoice.tax), pageWidth - margin, y, { align: "right" });
+  
+  // Draw line
+  y += 5;
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 10;
+  
+  // Final amount
+  doc.setTextColor(204, 0, 0); // #cc0000
+  doc.setFont("helvetica", "bold");
+  doc.text("FINAL TO BE PAID", margin, y);
+  
+  // Amount in words box
+  const amountInWords = convertNumberToWords(invoice.total);
+  const wordsBoxWidth = doc.getTextWidth(`Rupees ${amountInWords}`) + 10;
+  
+  doc.setFillColor(102, 102, 102); // #666
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.roundedRect(pageWidth - margin - wordsBoxWidth - 30, y - 5, wordsBoxWidth, 8, 1, 1, 'F');
+  doc.text(`Rupees ${amountInWords}`, pageWidth - margin - wordsBoxWidth/2 - 30, y, { align: "center" });
+  
+  // Amount box
+  doc.setFillColor(0, 179, 179); // #00b3b3
+  doc.roundedRect(pageWidth - margin - 28, y - 5, 28, 8, 1, 1, 'F');
+  doc.setFontSize(16);
+  doc.text(`₹ ${invoice.total}/-`, pageWidth - margin - 14, y, { align: "center" });
+  
+  // Draw line
+  y += 10;
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 15;
+  
+  // Payment details and signature
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("Payment Account Details", margin, y);
+  doc.line(margin, y + 2, margin + 60, y + 2);
+  y += 10;
+  
+  // Account details
+  doc.setFontSize(12);
+  const accountDetails = [
+    { label: "Account Holder:", value: " Jithin Jacob Issac" },
+    { label: "Bank Name:", value: " Federal Bank" },
+    { label: "Account Number:", value: " 99980111697400" },
+    { label: "IFSC:", value: " FDRL0001443" },
+    { label: "Branch:", value: " Mallappally" }
   ];
   
-  const tableRows = invoice.items.map((item) => {
-    return {
-      description: item.description,
-      quantity: item.quantity,
-      price: formatCurrency(item.price),
-      total: formatCurrency(item.price * item.quantity),
-    };
+  accountDetails.forEach((detail, index) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(detail.label, margin, y + (index * 6));
+    doc.setFont("helvetica", "normal");
+    doc.text(detail.value, margin + doc.getTextWidth(detail.label), y + (index * 6));
   });
   
-  doc.autoTable({
-    head: [tableColumns.map(col => col.header)],
-    body: tableRows.map(row => [
-      row.description,
-      row.quantity,
-      row.price,
-      row.total,
-    ]),
-    startY: 130,
-    margin: { left: margin, right: margin },
-    headStyles: {
-      fillColor: [240, 240, 240],
-      textColor: [0, 0, 0],
-      fontStyle: "bold",
-    },
-    alternateRowStyles: {
-      fillColor: [249, 249, 249],
-    },
-    columnStyles: {
-      0: { cellWidth: 'auto' },
-      1: { cellWidth: 20, halign: 'right' },
-      2: { cellWidth: 40, halign: 'right' },
-      3: { cellWidth: 40, halign: 'right' },
-    },
-  });
-  
-  // Get the Y position after the table
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
-  
-  // Summary table (subtotal, tax, total)
-  doc.autoTable({
-    body: [
-      ["Subtotal", formatCurrency(invoice.subtotal)],
-      ["Tax", formatCurrency(invoice.tax)],
-      ["Total", formatCurrency(invoice.total)],
-    ],
-    startY: finalY,
-    margin: { left: pageWidth - margin - 80, right: margin },
-    theme: 'plain',
-    styles: {
-      fontSize: 12,
-    },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 40, halign: 'left' },
-      1: { cellWidth: 40, halign: 'right' },
-    },
-  });
-  
-  // Add footer
-  const footerPosition = pageHeight - 30;
-  
-  doc.setDrawColor(0, 188, 212);
-  doc.setLineWidth(0.5);
-  doc.line(margin, footerPosition, pageWidth - margin, footerPosition);
-  
+  // Signature
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Thank you for your business!", pageWidth / 2, footerPosition + 10, { align: "center" });
+  doc.text("For Techius Solutions ,", pageWidth - margin - 45, y);
+  doc.setFont("helvetica", "bold");
+  doc.text("RICHU EAPEN GEORGE", pageWidth - margin - 45, y + 10);
+  
+  // Thank you message
+  const thankYouY = y + 60;
+  doc.line(margin, thankYouY - 5, pageWidth - margin, thankYouY - 5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(16);
+  doc.text("Thank You for your business !", pageWidth / 2, thankYouY, { align: "center" });
+  doc.line(margin, thankYouY + 5, pageWidth - margin, thankYouY + 5);
+  
+  // Quote
+  doc.setFillColor(102, 102, 102); // #666
+  doc.rect(margin, thankYouY + 10, contentWidth, 15, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "italic");
+  doc.text('"Logic will get you from A to B. Imagination will take you everywhere." - Albert Einstein', 
+    pageWidth / 2, thankYouY + 18, { align: "center" });
+  
+  // Footer note
+  doc.setFillColor(0, 179, 179); // #00b3b3
+  doc.rect(margin, thankYouY + 30, contentWidth, 15, 'F');
+  doc.setFont("helvetica", "bold");
+  doc.text("Note:", margin + 5, thankYouY + 38);
+  doc.setFont("helvetica", "normal");
+  doc.text("• Server downtime may occur rarely during scheduled maintenances or damages due to natural disasters.", 
+    margin + 5, thankYouY + 45);
   
   // Save the PDF
   doc.save(`Invoice_${invoice.invoiceNumber}.pdf`);

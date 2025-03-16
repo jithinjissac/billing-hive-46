@@ -26,4 +26,12 @@ export interface Invoice {
   tax: number;
   total: number;
   notes?: string;
+  discount?: number;
+  paymentDetails?: {
+    accountHolder: string;
+    bankName: string;
+    accountNumber: string;
+    ifsc: string;
+    branch: string;
+  };
 }
