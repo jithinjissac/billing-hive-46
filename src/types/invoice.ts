@@ -23,7 +23,7 @@ export interface Invoice {
   customer: Customer;
   date: string;
   dueDate: string;
-  status: "draft" | "pending" | "paid" | "overdue" | "cancelled";
+  status: "draft" | "pending" | "paid" | "overdue";
   items: InvoiceItem[];
   subtotal: number;
   tax: number;

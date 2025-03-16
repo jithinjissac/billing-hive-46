@@ -123,7 +123,7 @@ const InvoiceView = () => {
           };
         });
         
-        let status = invoiceData.status as "draft" | "pending" | "paid" | "overdue" | "cancelled";
+        let status = invoiceData.status as "draft" | "pending" | "paid" | "overdue";
         
         const fullInvoice: Invoice = {
           id: invoiceData.id,
@@ -212,7 +212,7 @@ const InvoiceView = () => {
     if (!invoice || !id) return;
     
     if (newStatus !== 'draft' && newStatus !== 'pending' && newStatus !== 'paid' && 
-        newStatus !== 'overdue' && newStatus !== 'cancelled') {
+        newStatus !== 'overdue') {
       toast.error("Invalid status value");
       return;
     }
@@ -220,14 +220,9 @@ const InvoiceView = () => {
     try {
       setIsUpdatingStatus(true);
       
-      let dbStatus = newStatus;
-      if (dbStatus === "cancelled") {
-        dbStatus = "draft";
-      }
-      
       const { error } = await supabase
         .from('invoices')
-        .update({ status: dbStatus })
+        .update({ status: newStatus as "draft" | "pending" | "paid" | "overdue" })
         .eq('id', id);
       
       if (error) {
@@ -239,7 +234,7 @@ const InvoiceView = () => {
       setInvoice(prev => {
         if (!prev) return null;
         
-        const updatedStatus = newStatus as "draft" | "pending" | "paid" | "overdue" | "cancelled";
+        const updatedStatus = newStatus as "draft" | "pending" | "paid" | "overdue";
         
         return {
           ...prev,
@@ -319,7 +314,6 @@ const InvoiceView = () => {
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>

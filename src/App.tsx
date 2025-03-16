@@ -11,6 +11,7 @@ import InvoiceCreate from "./pages/InvoiceCreate";
 import InvoiceView from "./pages/InvoiceView";
 import InvoiceEdit from "./pages/InvoiceEdit";
 import Customers from "./pages/Customers";
+import CustomerDetail from "./pages/CustomerDetail";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
@@ -44,6 +45,7 @@ const App = () => {
             <Route path="/invoices/:id" element={<InvoiceView />} />
             <Route path="/invoices/edit/:id" element={<InvoiceEdit />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
