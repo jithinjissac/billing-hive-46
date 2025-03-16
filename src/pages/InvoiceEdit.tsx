@@ -79,7 +79,6 @@ const InvoiceEdit = () => {
           const specs = item.item_specs?.map(spec => spec.spec_text) || [];
           return {
             id: item.id,
-            // Safely access the name property which now exists in the database
             name: item.name || "",
             description: item.description,
             quantity: item.quantity,
@@ -139,6 +138,7 @@ const InvoiceEdit = () => {
       
       const status = updatedInvoice.status;
       
+      // Make sure the notes field is included in the update
       const { error: invoiceError } = await supabase
         .from('invoices')
         .update({
@@ -150,7 +150,7 @@ const InvoiceEdit = () => {
           subtotal: updatedInvoice.subtotal,
           tax: updatedInvoice.tax,
           total: updatedInvoice.total,
-          notes: updatedInvoice.notes,
+          notes: updatedInvoice.notes, // Ensure notes are included here
           currency: updatedInvoice.currency,
           discount: updatedInvoice.discount || 0
         })
@@ -174,11 +174,14 @@ const InvoiceEdit = () => {
       }
       
       for (const item of updatedInvoice.items) {
+        // Ensure item name is never empty or undefined
+        const itemName = item.name || "Unnamed Item";
+        
         const { data: newItem, error: itemError } = await supabase
           .from('invoice_items')
           .insert({
             invoice_id: id,
-            name: item.name || "",  // Properly include item name
+            name: itemName,  // Use the sanitized name
             description: item.description,
             quantity: item.quantity,
             price: item.price
