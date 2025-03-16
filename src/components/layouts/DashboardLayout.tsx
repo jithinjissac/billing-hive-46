@@ -33,7 +33,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
-              <Sidebar />
+              <Sidebar showCloseButton={true} />
             </SheetContent>
           </Sheet>
         </div>
