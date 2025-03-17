@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -70,7 +69,7 @@ const SignUp = () => {
       if (data?.user) {
         console.log("User created successfully:", data.user.id);
         
-        // Explicitly create/update the profile record with first and last name
+        // Create the profile record explicitly with first and last name
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -79,8 +78,6 @@ const SignUp = () => {
             last_name: lastName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'id'
           });
           
         if (profileError) {

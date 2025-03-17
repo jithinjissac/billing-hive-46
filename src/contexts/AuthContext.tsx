@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { supabase, createPublicBucket } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
