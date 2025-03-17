@@ -3,17 +3,48 @@ import { useHealthCheck } from "@/contexts/HealthCheckContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { useEffect } from "react";
 
 export function DatabaseHealthIndicator() {
   const { 
     lastCheckStatus, 
     timeSinceLastConnection, 
     isCheckingHealth, 
-    forceHealthCheck 
+    forceHealthCheck,
+    autoReconnectEnabled,
+    toggleAutoReconnect
   } = useHealthCheck();
 
+  // Attempt to check connection once when component mounts
+  useEffect(() => {
+    // Only force a check if we've never checked before or if there was a previous failure
+    if (lastCheckStatus === null || lastCheckStatus === false) {
+      forceHealthCheck();
+    }
+  }, [lastCheckStatus, forceHealthCheck]);
+
   if (lastCheckStatus === null) {
-    return null; // Don't show anything until we have a result
+    return (
+      <Alert variant="default" className="mb-4 bg-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <AlertCircle className="h-4 w-4 mr-2 text-gray-500" />
+            <AlertDescription className="flex items-center">
+              <span className="mr-2">Checking database connection...</span>
+            </AlertDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={forceHealthCheck} 
+            disabled={isCheckingHealth}
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${isCheckingHealth ? 'animate-spin' : ''}`} />
+            {isCheckingHealth ? 'Checking...' : 'Check now'}
+          </Button>
+        </div>
+      </Alert>
+    );
   }
 
   return (
@@ -25,13 +56,25 @@ export function DatabaseHealthIndicator() {
           ) : (
             <XCircle className="h-4 w-4 mr-2 text-red-500" />
           )}
-          <AlertDescription className="flex items-center">
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center">
             <span className="mr-2">
               Database {lastCheckStatus ? "connected" : "disconnected"}
             </span>
             <span className="text-xs text-muted-foreground">
               Last check: {timeSinceLastConnection}
             </span>
+            {!lastCheckStatus && (
+              <span className="text-xs ml-0 sm:ml-2 mt-1 sm:mt-0">
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="h-auto p-0 text-xs underline" 
+                  onClick={toggleAutoReconnect}
+                >
+                  {autoReconnectEnabled ? "Disable" : "Enable"} auto-reconnect
+                </Button>
+              </span>
+            )}
           </AlertDescription>
         </div>
         <Button 
