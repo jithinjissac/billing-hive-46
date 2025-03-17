@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { supabase, createPublicBucket } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -160,17 +159,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const refreshSession = useCallback(async () => {
     try {
       console.log("Refreshing session...");
-      setIsLoading(true);
-      
-      const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error("Error refreshing session:", error);
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        return null;
-      }
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       
       if (currentSession) {
         console.log("Session found, setting session and user");
@@ -178,7 +167,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(currentSession.user);
         
         // Always fetch the profile when refreshing session
-        await fetchProfile(currentSession.user.id);
+        const profileData = await fetchProfile(currentSession.user.id);
+        console.log("Profile data after refresh:", profileData);
       } else {
         console.log("No session found, clearing user and profile data");
         setSession(null);
@@ -190,8 +180,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (error) {
       console.error("Error refreshing session:", error);
       return null;
-    } finally {
-      setIsLoading(false);
     }
   }, [fetchProfile]);
 
@@ -292,15 +280,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         console.log("Initializing auth...");
         setIsLoading(true);
-        
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Error getting initial session:", error);
-          setAuthInitialized(true);
-          setIsLoading(false);
-          return;
-        }
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (initialSession) {
           console.log("Initial session found:", initialSession.user.id);
@@ -340,6 +320,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
       
       setIsLoading(false);
+      setAuthInitialized(true);
       
       if (event === 'SIGNED_IN') {
         toast.success("Signed in successfully");

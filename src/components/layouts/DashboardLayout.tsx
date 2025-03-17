@@ -1,3 +1,4 @@
+
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -19,61 +20,44 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [localLoading, setLocalLoading] = useState(true);
   
-  // Define the closeSidebar function to close the mobile sidebar
-  const closeSidebar = () => {
-    setSidebarOpen(false);
-  };
-  
   // Attempt to refresh session if needed and redirect if not authenticated
   useEffect(() => {
-    // Set a maximum loading time to prevent infinite loading
-    const loadingTimeout = setTimeout(() => {
-      setLocalLoading(false);
-    }, 3000);
-    
     const checkAuth = async () => {
+      setLocalLoading(true);
+      
       try {
         // If we're already loading from auth context, wait for that to complete
-        if (!isLoading && !user) {
-          console.log("No user found in dashboard, attempting to refresh session");
-          const session = await refreshSession();
-          
-          if (!session) {
-            console.log("No session after refresh, redirecting to login");
-            navigate('/auth/login');
-          }
+        if (isLoading) {
+          return;
         }
-      } catch (error) {
-        console.error("Error checking authentication in dashboard:", error);
-        navigate('/auth/login');
+        
+        if (!user) {
+          console.log("No user found, redirecting to login");
+          navigate('/auth/login');
+          return;
+        }
       } finally {
-        // Always clear loading after a check
-        setLocalLoading(false);
-        clearTimeout(loadingTimeout);
+        // Always set loading to false after a short delay to prevent flash
+        setTimeout(() => {
+          setLocalLoading(false);
+        }, 100);
       }
     };
     
-    if (!isLoading) {
-      checkAuth();
-    }
-    
-    return () => {
-      clearTimeout(loadingTimeout);
-    };
+    checkAuth();
   }, [user, isLoading, navigate, refreshSession]);
   
-  // Show loading spinner but limit the loading time
-  if ((localLoading || isLoading) && !user) {
+  const closeSidebar = () => setSidebarOpen(false);
+  
+  // Show loading spinner only for a short time to prevent getting stuck
+  if (localLoading && isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mr-3"></div>
-        <p className="text-sm text-gray-500">Loading dashboard...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="ml-3 text-sm text-gray-500">Loading dashboard...</p>
       </div>
     );
   }
-  
-  // If no user is found after loading, let the effect handle the redirect
-  if (!user) return null;
   
   // Force render the dashboard even if profile is not loaded yet
   if (isMobile) {
