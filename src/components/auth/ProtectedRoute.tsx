@@ -12,6 +12,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const location = useLocation();
   const [localLoading, setLocalLoading] = useState(true);
   const [refreshAttempted, setRefreshAttempted] = useState(false);
+  const [refreshTimeout, setRefreshTimeout] = useState(false);
   
   useEffect(() => {
     console.log("ProtectedRoute: Component mounted, current auth state:", { 
@@ -22,12 +23,21 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     });
 
     // Force resolution after a timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
+    const loadingTimeout = setTimeout(() => {
       if (localLoading) {
         console.log("ProtectedRoute: Loading timeout reached, forcing state resolution");
         setLocalLoading(false);
       }
-    }, 2000); // Reduced from 3s to 2s for faster resolution
+    }, 2000);
+    
+    // If refresh takes too long, set a timeout flag
+    const refreshTimeoutId = setTimeout(() => {
+      if (!refreshAttempted) {
+        console.warn("ProtectedRoute: Refresh session taking too long, setting timeout flag");
+        setRefreshTimeout(true);
+        setLocalLoading(false);
+      }
+    }, 4000);
     
     const checkAuth = async () => {
       console.log("ProtectedRoute: Checking auth status...");
@@ -47,7 +57,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           
           // Add timeout to the refresh call to prevent hanging
           const refreshPromise = refreshSession();
-          const timeoutPromise = new Promise((_, reject) => 
+          const timeoutPromise = new Promise<null>((_, reject) => 
             setTimeout(() => reject(new Error("Session refresh timeout")), 3000)
           );
           
@@ -72,9 +82,16 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     checkAuth();
     
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(loadingTimeout);
+      clearTimeout(refreshTimeoutId);
     };
   }, [user, isLoading, refreshSession, refreshAttempted]);
+  
+  // Handle timeout case separately
+  if (refreshTimeout && !user) {
+    console.log("ProtectedRoute: Refresh timeout, redirecting to login to try again");
+    return <Navigate to="/auth/login" state={{ from: location, timeout: true }} replace />;
+  }
   
   // Only show loading spinner for a short time or if genuinely loading
   if ((isLoading || localLoading) && !refreshAttempted) {

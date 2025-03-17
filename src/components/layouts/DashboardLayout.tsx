@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { forceRefresh } from "@/utils/databaseHealthCheck";
+import { forceRefresh, performHealthCheck } from "@/utils/databaseHealthCheck";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -27,9 +27,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   // Attempt to refresh session if needed and redirect if not authenticated
   useEffect(() => {
     let isMounted = true;
+    let loadingTimeoutId: number;
+    
     const checkAuth = async () => {
       if (!isMounted) return;
       setLocalLoading(true);
+      
+      // Set a timeout to prevent infinite loading
+      loadingTimeoutId = window.setTimeout(() => {
+        if (isMounted) {
+          console.log("DashboardLayout: Loading timeout reached, forcing completion");
+          setLocalLoading(false);
+        }
+      }, 3000);
       
       try {
         // If we're already loading from auth context, wait for that to complete
@@ -42,9 +52,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           navigate('/auth/login');
           return;
         }
+        
+        // Run a health check to ensure database connectivity
+        await performHealthCheck();
+      } catch (error) {
+        console.error("Error in DashboardLayout auth check:", error);
       } finally {
         // Always set loading to false after a short delay to prevent flash
         if (isMounted) {
+          clearTimeout(loadingTimeoutId);
           setTimeout(() => {
             setLocalLoading(false);
           }, 100);
@@ -56,6 +72,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     
     return () => {
       isMounted = false;
+      clearTimeout(loadingTimeoutId);
     };
   }, [user, isLoading, navigate, refreshSession]);
   
@@ -65,7 +82,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     forceRefresh();
   };
   
-  // Show loading spinner only for a short time to prevent getting stuck
+  // Show loading spinner with a timeout to prevent getting stuck
   if (localLoading && isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">

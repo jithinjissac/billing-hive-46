@@ -52,6 +52,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [bucketInitialized, setBucketInitialized] = useState(false);
+  const [authStateChangeProcessed, setAuthStateChangeProcessed] = useState(false);
   
   const initStorageBucket = useCallback(async () => {
     try {
@@ -184,7 +185,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const refreshSession = useCallback(async () => {
     try {
       console.log("Refreshing session...");
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Error refreshing session:", error);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setIsLoading(false);
+        return null;
+      }
       
       if (currentSession) {
         console.log("Session found, setting session and user");
@@ -192,8 +202,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(currentSession.user);
         
         // Always fetch the profile when refreshing session
-        const profileData = await fetchProfile(currentSession.user.id);
-        console.log("Profile data after refresh:", profileData);
+        await fetchProfile(currentSession.user.id);
+        console.log("Profile data after refresh:", profile);
       } else {
         console.log("No session found, clearing user and profile data");
         setSession(null);
@@ -204,9 +214,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return currentSession;
     } catch (error) {
       console.error("Error refreshing session:", error);
+      setIsLoading(false);
       return null;
+    } finally {
+      // Ensure loading state is updated even if there are errors
+      setIsLoading(false);
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, profile]);
 
   const updateProfile = useCallback(async (profileData: Partial<Profile>) => {
     if (!user) {
@@ -301,13 +315,34 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [user, profile, bucketInitialized, initStorageBucket]);
 
   useEffect(() => {
+    // Define a timeout for the initial auth check to prevent infinite loading
+    let authTimeoutId: number | undefined;
+    
     const initializeAuth = async () => {
       if (authInitialized) return;
       
       try {
         console.log("Initializing auth...");
         setIsLoading(true);
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        // Set a timeout to prevent infinite loading state
+        authTimeoutId = window.setTimeout(() => {
+          console.warn("Auth initialization timeout reached - forcing completion");
+          setIsLoading(false);
+          setAuthInitialized(true);
+        }, 5000); // 5 seconds timeout
+        
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        // Clear the timeout since we got a response
+        clearTimeout(authTimeoutId);
+        
+        if (error) {
+          console.error("Error getting initial session:", error);
+          setIsLoading(false);
+          setAuthInitialized(true);
+          return;
+        }
         
         if (initialSession) {
           console.log("Initial session found:", initialSession.user.id);
@@ -322,6 +357,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       } catch (error) {
         console.error("Error initializing auth:", error);
       } finally {
+        clearTimeout(authTimeoutId);
         setAuthInitialized(true);
         setIsLoading(false);
       }
@@ -331,6 +367,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       console.log("Auth state change:", event);
+      
+      // Mark that we've processed at least one auth state change event
+      setAuthStateChangeProcessed(true);
       
       if (newSession) {
         console.log("New session detected:", newSession.user.id);
@@ -357,17 +396,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      // Clean up timeout and listener on unmount
+      if (authTimeoutId) clearTimeout(authTimeoutId);
+      if (authListener) authListener.subscription.unsubscribe();
     };
   }, [fetchProfile, authInitialized]);
+  
+  // Fallback effect to ensure loading state is eventually turned off
+  // in case anything goes wrong with auth initialization
+  useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      if (isLoading && authInitialized) {
+        console.warn("Forcing loading state to false after timeout");
+        setIsLoading(false);
+      }
+    }, 8000); // 8 seconds fallback
+    
+    return () => clearTimeout(fallbackTimer);
+  }, [isLoading, authInitialized]);
 
   const signOut = useCallback(async () => {
     try {
       console.log("Signing out...");
+      setIsLoading(true);
       await supabase.auth.signOut();
+      // The onAuthStateChange handler will update state
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
+      setIsLoading(false);
     }
   }, []);
 

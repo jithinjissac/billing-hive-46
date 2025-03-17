@@ -44,10 +44,23 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     autoRefreshToken: true,
     storageKey: 'techiuspay-auth-token',
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
     flowType: 'pkce',
-    // Use the custom storage instead of inline object
     storage: customStorage
+  },
+  global: {
+    // Set timeouts for requests to avoid hanging
+    fetch: (url, options) => {
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 10000); // 10s timeout
+      
+      return fetch(url, {
+        ...options,
+        signal: timeoutController.signal
+      }).finally(() => {
+        clearTimeout(timeoutId);
+      });
+    }
   }
 });
 
@@ -105,6 +118,27 @@ export const clearSupabaseCache = () => {
     return true;
   } catch (error) {
     console.error('Failed to clear Supabase cache:', error);
+    return false;
+  }
+};
+
+// Add function to recover from auth data backup if available
+export const recoverAuthData = () => {
+  try {
+    const storageKey = 'techiuspay-auth-token';
+    const backupKey = `${storageKey}-backup`;
+    const backupData = localStorage.getItem(backupKey);
+    
+    if (backupData) {
+      console.log('Found auth data backup, attempting recovery');
+      localStorage.setItem(storageKey, backupData);
+      localStorage.removeItem(backupKey);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Failed to recover auth data:', error);
     return false;
   }
 };
