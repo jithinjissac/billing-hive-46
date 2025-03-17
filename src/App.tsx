@@ -30,7 +30,7 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       retry: 1, // Reduce retry attempts
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // Replaces cacheTime which is deprecated
     },
   },
 });

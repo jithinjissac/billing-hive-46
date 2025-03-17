@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Customer } from "@/types/invoice";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { safeUUID, prepareForInsert, prepareForUpdate } from "@/utils/supabaseHelpers";
 
 interface CustomerDialogProps {
   open: boolean;
@@ -58,16 +59,19 @@ export function CustomerDialog({
 
       // If it's an edit operation and onSubmit is provided
       if (customer && onSubmit) {
+        // Prepare data for update
+        const updateData = prepareForUpdate({
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          address: customerData.address
+        });
+
         // Update existing customer in Supabase
         const { error: updateError } = await supabase
           .from('customers')
-          .update({
-            name: customerData.name,
-            email: customerData.email,
-            phone: customerData.phone,
-            address: customerData.address
-          })
-          .eq('id', customerData.id);
+          .update(updateData)
+          .eq('id', safeUUID(customerData.id));
 
         if (updateError) {
           console.error("Error updating customer:", updateError);
@@ -80,16 +84,18 @@ export function CustomerDialog({
       } 
       // If it's a new customer
       else {
+        // Prepare data for insert by removing id field
+        const insertData = prepareForInsert({
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          address: customerData.address
+        });
+
         // Insert new customer to Supabase
         const { error: insertError } = await supabase
           .from('customers')
-          .insert({
-            id: customerData.id,
-            name: customerData.name,
-            email: customerData.email,
-            phone: customerData.phone,
-            address: customerData.address
-          });
+          .insert(insertData);
 
         if (insertError) {
           console.error("Error adding customer:", insertError);

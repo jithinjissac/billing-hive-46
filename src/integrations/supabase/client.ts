@@ -9,6 +9,36 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Define a custom storage interface to work with Supabase's Storage API
+const customStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      const value = localStorage.getItem(key);
+      console.log(`Retrieved key from storage: ${key.substring(0, 10)}...`);
+      return value;
+    } catch (error) {
+      console.error('Error accessing localStorage:', error);
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value);
+      console.log(`Stored key in storage: ${key.substring(0, 10)}...`);
+    } catch (error) {
+      console.error('Error setting localStorage:', error);
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key);
+      console.log(`Removed key from storage: ${key.substring(0, 10)}...`);
+    } catch (error) {
+      console.error('Error removing from localStorage:', error);
+    }
+  }
+};
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
@@ -16,35 +46,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storageKey: 'techiuspay-auth-token',
     detectSessionInUrl: false,
     flowType: 'pkce',
-    // Add browser cache options to improve reliability
-    localStorage: {
-      getItem: key => {
-        try {
-          const value = localStorage.getItem(key);
-          console.log(`Retrieved key from storage: ${key.substring(0, 10)}...`);
-          return value;
-        } catch (error) {
-          console.error('Error accessing localStorage:', error);
-          return null;
-        }
-      },
-      setItem: (key, value) => {
-        try {
-          localStorage.setItem(key, value);
-          console.log(`Stored key in storage: ${key.substring(0, 10)}...`);
-        } catch (error) {
-          console.error('Error setting localStorage:', error);
-        }
-      },
-      removeItem: key => {
-        try {
-          localStorage.removeItem(key);
-          console.log(`Removed key from storage: ${key.substring(0, 10)}...`);
-        } catch (error) {
-          console.error('Error removing from localStorage:', error);
-        }
-      }
-    }
+    // Use the custom storage instead of inline object
+    storage: customStorage
   }
 });
 

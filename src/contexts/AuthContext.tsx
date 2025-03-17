@@ -1,7 +1,9 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { supabase, createPublicBucket } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { safeUUID, prepareForInsert, prepareForUpdate } from "@/utils/supabaseHelpers";
 
 interface Profile {
   id: string;
@@ -95,7 +97,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', safeUUID(userId))
         .maybeSingle();
 
       if (fetchError) {
@@ -106,8 +108,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (existingProfile) {
         console.log("Profile data fetched:", existingProfile);
-        setProfile(existingProfile);
-        return existingProfile;
+        const profileData: Profile = {
+          id: existingProfile.id,
+          first_name: existingProfile.first_name,
+          last_name: existingProfile.last_name,
+          phone: existingProfile.phone,
+          address: existingProfile.address,
+          profile_picture_url: existingProfile.profile_picture_url,
+          position: existingProfile.position
+        };
+        setProfile(profileData);
+        return profileData;
       } else {
         console.log("No profile found, creating new profile for user:", userId);
         
@@ -122,16 +133,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           lastName = userData.user.user_metadata.last_name || null;
           console.log("Using metadata for profile creation:", firstName, lastName);
         }
+
+        // Prepare data for insert, ensuring we exclude id from auto-generated fields
+        const profileData = {
+          id: userId,
+          first_name: firstName,
+          last_name: lastName,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
         
+        // Directly use upsert without the prepareForInsert helper 
+        // since we specifically need the id field for this operation
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .upsert({ 
-            id: userId,
-            first_name: firstName,
-            last_name: lastName,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
+          .upsert(profileData, {
             onConflict: 'id'
           })
           .select()
@@ -143,8 +159,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return null;
         } else if (newProfile) {
           console.log("New profile created:", newProfile);
-          setProfile(newProfile);
-          return newProfile;
+          const createdProfile: Profile = {
+            id: newProfile.id,
+            first_name: newProfile.first_name,
+            last_name: newProfile.last_name,
+            phone: newProfile.phone,
+            address: newProfile.address,
+            profile_picture_url: newProfile.profile_picture_url,
+            position: newProfile.position
+          };
+          setProfile(createdProfile);
+          return createdProfile;
         }
       }
       
@@ -192,15 +217,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       console.log("Updating profile with data:", profileData);
       
-      const dataToUpdate = {
+      // Prepare the update data
+      const updateData = prepareForUpdate({
         ...profileData,
-        id: user.id,
         updated_at: new Date().toISOString()
-      };
+      });
       
       const { error } = await supabase
         .from('profiles')
-        .upsert(dataToUpdate);
+        .update(updateData)
+        .eq('id', safeUUID(user.id));
 
       if (error) {
         console.error("Error updating profile:", error);
@@ -237,11 +263,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (!bucketInitialized) {
         await initStorageBucket();
       }
-      
+
+      // Use a simpler update with just the profile_picture_url field
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ profile_picture_url: null })
-        .eq('id', user.id);
+        .eq('id', safeUUID(user.id));
       
       if (updateError) {
         console.error("Error updating profile:", updateError);
