@@ -163,10 +163,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       
       if (currentSession) {
+        console.log("Session found, setting session and user");
         setSession(currentSession);
         setUser(currentSession.user);
-        await fetchProfile(currentSession.user.id);
+        
+        // Always fetch the profile when refreshing session
+        const profileData = await fetchProfile(currentSession.user.id);
+        console.log("Profile data after refresh:", profileData);
       } else {
+        console.log("No session found, clearing user and profile data");
         setSession(null);
         setUser(null);
         setProfile(null);
@@ -279,9 +284,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (initialSession) {
+          console.log("Initial session found:", initialSession.user.id);
           setSession(initialSession);
           setUser(initialSession.user);
+          
+          // Fetch profile data for the logged-in user
           await fetchProfile(initialSession.user.id);
+        } else {
+          console.log("No initial session found");
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -297,10 +307,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log("Auth state change:", event);
       
       if (newSession) {
+        console.log("New session detected:", newSession.user.id);
         setSession(newSession);
         setUser(newSession.user);
+        
+        // Fetch profile on auth state change
         await fetchProfile(newSession.user.id);
       } else {
+        console.log("No session in auth state change");
         setSession(null);
         setUser(null);
         setProfile(null);

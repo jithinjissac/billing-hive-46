@@ -33,6 +33,7 @@ const Profile = () => {
           await refreshSession();
         } catch (error) {
           console.error("Error refreshing session:", error);
+          toast.error("Couldn't load your profile data");
         }
       }
     };
@@ -73,7 +74,9 @@ const Profile = () => {
     setLoading(true);
     
     try {
+      console.log("Submitting profile update with data:", formData);
       await updateProfile(formData);
+      toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
