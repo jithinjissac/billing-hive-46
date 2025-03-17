@@ -14,7 +14,14 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const [refreshAttempted, setRefreshAttempted] = useState(false);
   
   useEffect(() => {
-    // Set a more reasonable timeout to avoid UI being stuck in loading state forever
+    console.log("ProtectedRoute: Component mounted, current auth state:", { 
+      user: user ? "exists" : "null", 
+      isLoading, 
+      localLoading, 
+      refreshAttempted 
+    });
+
+    // Force resolution after a timeout to prevent infinite loading
     const timeout = setTimeout(() => {
       if (localLoading) {
         console.log("ProtectedRoute: Loading timeout reached, forcing state resolution");
@@ -33,7 +40,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
       
       // Only attempt refresh if we haven't already and don't have a user
-      if (!refreshAttempted && !user && !isLoading) {
+      if (!refreshAttempted && !user) {
         try {
           console.log("ProtectedRoute: Attempting to refresh session");
           setRefreshAttempted(true);
@@ -49,7 +56,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         } finally {
           setLocalLoading(false);
         }
-      } else if (!isLoading) {
+      } else {
+        // Either we've already attempted refresh or isLoading is false
         setLocalLoading(false);
       }
     };
@@ -61,7 +69,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     };
   }, [user, isLoading, refreshSession, refreshAttempted]);
   
-  // Only show loading spinner for a maximum of 3 seconds
+  // Only show loading spinner for a short time or if genuinely loading
   if ((isLoading || localLoading) && !refreshAttempted) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
