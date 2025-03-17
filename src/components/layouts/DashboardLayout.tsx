@@ -1,4 +1,3 @@
-
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -19,6 +18,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [localLoading, setLocalLoading] = useState(true);
+  
+  // Define the closeSidebar function to close the mobile sidebar
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
   
   // Attempt to refresh session if needed and redirect if not authenticated
   useEffect(() => {
