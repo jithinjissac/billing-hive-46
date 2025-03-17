@@ -32,7 +32,8 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
   const [timeSinceLastConnection, setTimeSinceLastConnection] = useState("Never");
   const [autoReconnectEnabled, setAutoReconnectEnabled] = useState(true);
-  const [timerInterval, setTimerInterval] = useState<number | null>(null);
+  // Change from number to NodeJS.Timeout | null to properly type the timer
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
   
   // Function to update the time display
   const updateTimeDisplay = useCallback(() => {
@@ -67,6 +68,7 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
       updateTimeDisplay();
     }, 30000); // Update every 30 seconds
     
+    // Store the interval ID properly
     setTimerInterval(interval);
     
     return () => {
@@ -76,7 +78,7 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
   
   // Effect for auto-reconnection attempts
   useEffect(() => {
-    let reconnectTimer: number | null = null;
+    let reconnectTimer: NodeJS.Timeout | null = null;
     
     const startReconnectAttempts = async () => {
       if (!autoReconnectEnabled || lastCheckStatus !== false) return;
@@ -86,21 +88,21 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (success) {
         setLastCheckStatus(true);
         updateTimeDisplay();
-        if (reconnectTimer) window.clearTimeout(reconnectTimer);
+        if (reconnectTimer) clearTimeout(reconnectTimer);
         return;
       }
       
       // If not successful, schedule another attempt
-      reconnectTimer = window.setTimeout(startReconnectAttempts, 30000); // Try every 30 seconds
+      reconnectTimer = setTimeout(startReconnectAttempts, 30000); // Try every 30 seconds
     };
     
     // If connection is lost and auto-reconnect is enabled, start attempting to reconnect
     if (lastCheckStatus === false && autoReconnectEnabled) {
-      reconnectTimer = window.setTimeout(startReconnectAttempts, 5000); // First attempt after 5 seconds
+      reconnectTimer = setTimeout(startReconnectAttempts, 5000); // First attempt after 5 seconds
     }
     
     return () => {
-      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
     };
   }, [lastCheckStatus, autoReconnectEnabled, updateTimeDisplay]);
   
