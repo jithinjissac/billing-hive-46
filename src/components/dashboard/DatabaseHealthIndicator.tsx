@@ -3,7 +3,7 @@ import { useHealthCheck } from "@/contexts/HealthCheckContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function DatabaseHealthIndicator() {
   const { 
@@ -14,14 +14,33 @@ export function DatabaseHealthIndicator() {
     autoReconnectEnabled,
     toggleAutoReconnect
   } = useHealthCheck();
+  
+  // Local state to prevent excessive UI updates
+  const [isInitialCheck, setIsInitialCheck] = useState(true);
 
   // Attempt to check connection once when component mounts
   useEffect(() => {
-    // Only force a check if we've never checked before or if there was a previous failure
-    if (lastCheckStatus === null || lastCheckStatus === false) {
-      forceHealthCheck();
+    let isMounted = true;
+    
+    // Only force a check if we've never checked before
+    if (lastCheckStatus === null && isInitialCheck) {
+      console.log("DatabaseHealthIndicator: Running initial check");
+      forceHealthCheck().finally(() => {
+        if (isMounted) {
+          setIsInitialCheck(false);
+        }
+      });
     }
-  }, [lastCheckStatus, forceHealthCheck]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [lastCheckStatus, forceHealthCheck, isInitialCheck]);
+
+  // Handle manual check
+  const handleCheckNow = () => {
+    forceHealthCheck();
+  };
 
   if (lastCheckStatus === null) {
     return (
@@ -36,7 +55,7 @@ export function DatabaseHealthIndicator() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={forceHealthCheck} 
+            onClick={handleCheckNow} 
             disabled={isCheckingHealth}
           >
             <RefreshCw className={`h-3 w-3 mr-1 ${isCheckingHealth ? 'animate-spin' : ''}`} />
@@ -80,7 +99,7 @@ export function DatabaseHealthIndicator() {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={forceHealthCheck} 
+          onClick={handleCheckNow} 
           disabled={isCheckingHealth}
         >
           <RefreshCw className={`h-3 w-3 mr-1 ${isCheckingHealth ? 'animate-spin' : ''}`} />

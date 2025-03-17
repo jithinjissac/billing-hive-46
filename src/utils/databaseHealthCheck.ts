@@ -6,6 +6,9 @@ import { toast } from "sonner";
 let lastSuccessfulConnection: Date | null = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 3;
+// Add debounce protection
+let lastCheckTime = 0;
+const MIN_CHECK_INTERVAL = 2000; // Minimum 2 seconds between checks
 
 /**
  * Clears any app-specific caches that need periodic refreshing
@@ -32,6 +35,14 @@ export const clearCaches = (): void => {
  */
 export const checkDatabaseConnection = async (showToasts = true): Promise<boolean> => {
   try {
+    // Prevent excessive checks with debounce
+    const now = Date.now();
+    if (now - lastCheckTime < MIN_CHECK_INTERVAL) {
+      console.log("Skipping health check - too soon since last check");
+      return lastSuccessfulConnection !== null;
+    }
+    
+    lastCheckTime = now;
     console.log("Checking database connection...");
     
     // Attempt a simple query to verify database connectivity
@@ -137,9 +148,6 @@ export const attemptReconnect = async (
     console.log("Maximum reconnection attempts reached. Giving up.");
     return false;
   }
-  
-  // Wait for the specified delay
-  await new Promise(resolve => setTimeout(resolve, delayMs));
   
   // Try to reconnect
   const result = await performHealthCheck(false);

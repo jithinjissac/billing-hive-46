@@ -32,7 +32,6 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
   const [timeSinceLastConnection, setTimeSinceLastConnection] = useState("Never");
   const [autoReconnectEnabled, setAutoReconnectEnabled] = useState(true);
-  // Change from number to NodeJS.Timeout | null to properly type the timer
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
   
   // Function to update the time display
@@ -43,10 +42,13 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Function to force a health check
   const forceHealthCheck = useCallback(async () => {
     try {
+      // Prevent multiple simultaneous checks
       if (isCheckingHealth) return;
       
       setIsCheckingHealth(true);
       const status = await performHealthCheck();
+      
+      // Only update status if the component is still mounted
       setLastCheckStatus(status);
       updateTimeDisplay();
     } catch (error) {
@@ -64,11 +66,16 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
   
   // Set up an interval to update the time display
   useEffect(() => {
+    // Clear any existing interval first
+    if (timerInterval) {
+      clearInterval(timerInterval);
+    }
+    
+    // Create a new interval
     const interval = setInterval(() => {
       updateTimeDisplay();
     }, 30000); // Update every 30 seconds
     
-    // Store the interval ID properly
     setTimerInterval(interval);
     
     return () => {
@@ -76,39 +83,57 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
   }, [updateTimeDisplay]);
   
-  // Effect for auto-reconnection attempts
+  // Effect for auto-reconnection attempts - fix infinite loop
   useEffect(() => {
     let reconnectTimer: NodeJS.Timeout | null = null;
     
     const startReconnectAttempts = async () => {
       if (!autoReconnectEnabled || lastCheckStatus !== false) return;
       
+      console.log("Attempting to reconnect to database...");
+      
       // Try to reconnect and if successful, clear the timer
       const success = await attemptReconnect();
       if (success) {
+        console.log("Reconnection successful!");
         setLastCheckStatus(true);
         updateTimeDisplay();
-        if (reconnectTimer) clearTimeout(reconnectTimer);
         return;
       }
       
-      // If not successful, schedule another attempt
+      console.log("Reconnection failed, scheduling next attempt...");
+      
+      // If not successful and we're still mounted and reconnect is still enabled,
+      // schedule another attempt - but don't create nested timers
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(startReconnectAttempts, 30000); // Try every 30 seconds
     };
     
     // If connection is lost and auto-reconnect is enabled, start attempting to reconnect
     if (lastCheckStatus === false && autoReconnectEnabled) {
+      console.log("Connection lost, starting reconnection process...");
+      // Clear any existing timer before setting a new one
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(startReconnectAttempts, 5000); // First attempt after 5 seconds
     }
     
     return () => {
-      if (reconnectTimer) clearTimeout(reconnectTimer);
+      // Clean up timer on unmount or when dependencies change
+      if (reconnectTimer) {
+        console.log("Clearing reconnect timer...");
+        clearTimeout(reconnectTimer);
+      }
     };
   }, [lastCheckStatus, autoReconnectEnabled, updateTimeDisplay]);
   
   // Perform an initial health check when the component mounts
   useEffect(() => {
-    forceHealthCheck();
+    console.log("HealthCheckProvider mounted, performing initial check");
+    
+    // Only do initial check if not already checking
+    if (!isCheckingHealth && lastCheckStatus === null) {
+      forceHealthCheck();
+    }
     
     // Add event listener for online/offline events
     const handleOnline = () => {
@@ -122,7 +147,7 @@ export const HealthCheckProvider: React.FC<{ children: React.ReactNode }> = ({ c
       window.removeEventListener("online", handleOnline);
       if (timerInterval) clearInterval(timerInterval);
     };
-  }, [forceHealthCheck, timerInterval]);
+  }, [forceHealthCheck, isCheckingHealth, lastCheckStatus, timerInterval]);
   
   return (
     <HealthCheckContext.Provider 
