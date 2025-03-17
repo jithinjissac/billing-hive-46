@@ -18,7 +18,7 @@ import {
 /**
  * Generate and download a PDF for the given invoice
  */
-export async function generatePDF(invoice: Invoice, autoDownload: boolean = false): Promise<string | undefined> {
+export async function generatePDF(invoice: Invoice, autoDownload: boolean = false, creatorName?: string): Promise<string | undefined> {
   try {
     // Create a new PDF document
     const doc = new jsPDF({

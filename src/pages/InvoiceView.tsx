@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,7 @@ const InvoiceView = () => {
   const generatePdfPreview = async (invoiceData: Invoice) => {
     try {
       setIsPdfLoading(true);
-      const preview = await generatePDF(invoiceData, false, invoiceData.creatorName || undefined);
+      const preview = await generatePDF(invoiceData, false, invoiceData.creatorName);
       setPdfPreview(preview);
     } catch (error) {
       console.error("Error generating PDF preview:", error);
@@ -202,7 +201,7 @@ const InvoiceView = () => {
     if (!invoice) return;
     
     try {
-      await generatePDF(invoice, true, invoice.creatorName || undefined);
+      await generatePDF(invoice, true, invoice.creatorName);
       toast.success("Invoice downloaded successfully");
     } catch (error) {
       console.error("Error generating PDF:", error);
