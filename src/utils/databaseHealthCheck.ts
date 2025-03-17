@@ -1,20 +1,28 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, clearSupabaseCache } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Store the last successful connection time
 let lastSuccessfulConnection: Date | null = null;
+let connectionAttempts = 0;
+const MAX_ATTEMPTS = 3;
 
 /**
  * Clears any app-specific caches that need periodic refreshing
  */
 export const clearCaches = (): void => {
   // Clear any localStorage or sessionStorage caches that might need to be refreshed
-  const cachesToClear = ['recent-invoices', 'dashboard-stats'];
+  const cachesToClear = [
+    'recent-invoices', 
+    'dashboard-stats', 
+    'customer-list-cache',
+    'invoice-stats'
+  ];
   
   cachesToClear.forEach(cacheKey => {
     try {
       localStorage.removeItem(cacheKey);
+      sessionStorage.removeItem(cacheKey);
     } catch (error) {
       console.error(`Failed to clear cache: ${cacheKey}`, error);
     }
@@ -40,12 +48,16 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
       throw error;
     }
     
+    // Reset connection attempts on success
+    connectionAttempts = 0;
+    
     // Update last successful connection time
     lastSuccessfulConnection = new Date();
     return true;
   } catch (error) {
+    connectionAttempts++;
     const errorMessage = error instanceof Error ? error.message : 'Unknown database error';
-    console.error("Database connectivity check failed:", errorMessage);
+    console.error(`Database connectivity check failed (attempt ${connectionAttempts}/${MAX_ATTEMPTS}):`, errorMessage);
     
     // Only show toast for errors if we previously had a successful connection
     // or if this is the first check (lastSuccessfulConnection is null)
@@ -54,6 +66,13 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
         description: "Failed to connect to the database. Please check your internet connection or try again later.",
         duration: 5000
       });
+    }
+    
+    // If we've had multiple failed attempts, try clearing the Supabase cache
+    if (connectionAttempts >= MAX_ATTEMPTS) {
+      console.log("Multiple connection failures, attempting to clear auth cache");
+      clearSupabaseCache();
+      connectionAttempts = 0; // Reset after clearing cache
     }
     
     return false;
@@ -100,4 +119,19 @@ export const getTimeSinceLastConnection = (): string => {
   // Convert to hours
   const diffHour = Math.floor(diffMin / 60);
   return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
+};
+
+/**
+ * Force a full refresh of the application state
+ * This is useful when the app seems to be in a bad state
+ */
+export const forceRefresh = (): void => {
+  // Clear all caches
+  clearCaches();
+  
+  // Clear Supabase auth cache
+  clearSupabaseCache();
+  
+  // Reload the page
+  window.location.reload();
 };

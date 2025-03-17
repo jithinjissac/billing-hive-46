@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         console.log("ProtectedRoute: Loading timeout reached, forcing state resolution");
         setLocalLoading(false);
       }
-    }, 3000); // 3 seconds max loading time
+    }, 2000); // Reduced from 3s to 2s for faster resolution
     
     const checkAuth = async () => {
       console.log("ProtectedRoute: Checking auth status...");
@@ -44,7 +44,14 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         try {
           console.log("ProtectedRoute: Attempting to refresh session");
           setRefreshAttempted(true);
-          const session = await refreshSession();
+          
+          // Add timeout to the refresh call to prevent hanging
+          const refreshPromise = refreshSession();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Session refresh timeout")), 3000)
+          );
+          
+          const session = await Promise.race([refreshPromise, timeoutPromise]);
           
           if (!session) {
             console.log("ProtectedRoute: No session after refresh, will redirect to login");
@@ -81,6 +88,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   
   if (!user) {
     console.log("ProtectedRoute: No authenticated user, redirecting to login");
+    // Pass the intended location to return to after login
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
   

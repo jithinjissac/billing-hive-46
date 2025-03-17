@@ -15,7 +15,36 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     storageKey: 'techiuspay-auth-token',
     detectSessionInUrl: false,
-    flowType: 'pkce'
+    flowType: 'pkce',
+    // Add browser cache options to improve reliability
+    localStorage: {
+      getItem: key => {
+        try {
+          const value = localStorage.getItem(key);
+          console.log(`Retrieved key from storage: ${key.substring(0, 10)}...`);
+          return value;
+        } catch (error) {
+          console.error('Error accessing localStorage:', error);
+          return null;
+        }
+      },
+      setItem: (key, value) => {
+        try {
+          localStorage.setItem(key, value);
+          console.log(`Stored key in storage: ${key.substring(0, 10)}...`);
+        } catch (error) {
+          console.error('Error setting localStorage:', error);
+        }
+      },
+      removeItem: key => {
+        try {
+          localStorage.removeItem(key);
+          console.log(`Removed key from storage: ${key.substring(0, 10)}...`);
+        } catch (error) {
+          console.error('Error removing from localStorage:', error);
+        }
+      }
+    }
   }
 });
 
@@ -46,5 +75,33 @@ export const createPublicBucket = async (bucketName: string) => {
   } catch (error) {
     console.error("Error in createPublicBucket:", error);
     return { error: true, message: String(error), partial: true };
+  }
+};
+
+// Add function to clear Supabase cache
+export const clearSupabaseCache = () => {
+  try {
+    // Try to clear any cached auth data
+    const storageKey = 'techiuspay-auth-token';
+    const authData = localStorage.getItem(storageKey);
+    
+    if (authData) {
+      // Store temporary backup for recovery if needed
+      localStorage.setItem(`${storageKey}-backup`, authData);
+      console.log('Created backup of auth data before clearing');
+      
+      // Remove the actual auth data
+      localStorage.removeItem(storageKey);
+      console.log('Cleared Supabase auth cache');
+    }
+    
+    // Clear other potential caches
+    sessionStorage.removeItem('sb-refresh-token');
+    sessionStorage.removeItem('sb-access-token');
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to clear Supabase cache:', error);
+    return false;
   }
 };

@@ -20,16 +20,27 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { Toaster } from "sonner";
 import { HealthCheckProvider } from "@/contexts/HealthCheckContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Suspense, lazy } from "react";
 
-// Create a client
+// Create a client with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
+      retry: 1, // Reduce retry attempts
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
     },
   },
 });
+
+// Simple loading component for lazy-loaded routes
+const RouteLoading = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
 
 function App() {
   return (
